@@ -1,0 +1,365 @@
+{% extends "base.html" %}
+
+{% block title %}Profile - Adaptive Quiz Generator{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2><i class="bi bi-person-circle text-primary"></i> My Profile</h2>
+        <p class="text-muted">Manage your account settings and preferences</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <!-- Profile Card -->
+        <div class="card mb-4">
+            <div class="card-body text-center">
+                <div class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" 
+                     style="width: 80px; height: 80px; font-size: 2rem;">
+                    {{ user.name[0] | upper if user.name else 'U' }}
+                </div>
+                <h4>{{ user.name | default('User') }}</h4>
+                <p class="text-muted mb-2">{{ user.email }}</p>
+                <span class="badge bg-{{ 'warning' if user.role == 'instructor' else 'info' }}">
+                    {{ user.role | title | default('Student') }}
+                </span>
+                <hr>
+                <div class="text-start">
+                    <p class="mb-1"><strong>Member since:</strong></p>
+                    <p class="text-muted">{{ user.created_at | default('N/A') }}</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Quick Stats -->
+        <div class="card">
+            <div class="card-header bg-white">
+                <h6 class="mb-0"><i class="bi bi-bar-chart"></i> Quick Stats</h6>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled mb-0">
+                    <li class="d-flex justify-content-between mb-2">
+                        <span>Quizzes Taken</span>
+                        <strong>{{ stats.quizzes_taken | default(0) }}</strong>
+                    </li>
+                    <li class="d-flex justify-content-between mb-2">
+                        <span>Avg. Score</span>
+                        <strong>{{ stats.avg_score | default(0) }}%</strong>
+                    </li>
+                    <li class="d-flex justify-content-between mb-2">
+                        <span>Concepts Mastered</span>
+                        <strong>{{ stats.concepts_mastered | default(0) }}</strong>
+                    </li>
+                    <li class="d-flex justify-content-between">
+                        <span>Study Streak</span>
+                        <strong>{{ stats.streak | default(0) }} days</strong>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-8">
+        <!-- Update Profile Form -->
+        <div class="card mb-4">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="bi bi-pencil"></i> Update Profile</h5>
+            </div>
+            <div class="card-body">
+                <form id="updateProfileForm">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Full Name</label>
+                        <input type="text" class="form-control" id="name" name="name" 
+                               value="{{ user.name | default('') }}">
+                    </div>
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email Address</label>
+                        <input type="email" class="form-control" id="email" name="email" 
+                               value="{{ user.email }}" disabled>
+                        <small class="text-muted">Email cannot be changed</small>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check"></i> Save Changes
+                    </button>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Change Password -->
+        <div class="card mb-4">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="bi bi-key"></i> Change Password</h5>
+            </div>
+            <div class="card-body">
+                <form id="changePasswordForm">
+                    <div class="mb-3">
+                        <label for="currentPassword" class="form-label">Current Password</label>
+                        <input type="password" class="form-control" id="currentPassword" name="current_password">
+                    </div>
+                    <div class="mb-3">
+                        <label for="newPassword" class="form-label">New Password</label>
+                        <input type="password" class="form-control" id="newPassword" name="new_password">
+                    </div>
+                    <div class="mb-3">
+                        <label for="confirmPassword" class="form-label">Confirm New Password</label>
+                        <input type="password" class="form-control" id="confirmPassword" name="confirm_password">
+                    </div>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="bi bi-key"></i> Change Password
+                    </button>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Preferences -->
+        <div class="card mb-4">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="bi bi-gear"></i> Preferences</h5>
+            </div>
+            <div class="card-body">
+                <form id="preferencesForm">
+                    <div class="mb-3">
+                        <label class="form-label">Default Quiz Difficulty</label>
+                        <select class="form-select" name="default_difficulty">
+                            <option value="adaptive" {{ 'selected' if user.preferences.default_difficulty == 'adaptive' else '' }}>
+                                Adaptive (Recommended)
+                            </option>
+                            <option value="easy" {{ 'selected' if user.preferences.default_difficulty == 'easy' else '' }}>Easy</option>
+                            <option value="medium" {{ 'selected' if user.preferences.default_difficulty == 'medium' else '' }}>Medium</option>
+                            <option value="hard" {{ 'selected' if user.preferences.default_difficulty == 'hard' else '' }}>Hard</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Preferred Question Types</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="question_types" value="mcq" id="prefMcq" checked>
+                            <label class="form-check-label" for="prefMcq">Multiple Choice</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="question_types" value="tf" id="prefTf" checked>
+                            <label class="form-check-label" for="prefTf">True/False</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="question_types" value="short" id="prefShort" checked>
+                            <label class="form-check-label" for="prefShort">Short Answer</label>
+                        </div>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="emailNotifications" name="email_notifications" 
+                               {{ 'checked' if user.preferences.email_notifications else '' }}>
+                        <label class="form-check-label" for="emailNotifications">
+                            Receive email notifications
+                        </label>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check"></i> Save Preferences
+                    </button>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Danger Zone -->
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Danger Zone</h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-3">These actions are irreversible. Please proceed with caution.</p>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#clearDataModal">
+                        <i class="bi bi-trash"></i> Clear Quiz History
+                    </button>
+                    <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">
+                        <i class="bi bi-person-x"></i> Delete Account
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Clear Data Modal -->
+<div class="modal fade" id="clearDataModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Clear Quiz History</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to clear all your quiz history? This will reset your mastery levels and progress data.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" onclick="clearQuizHistory()">Clear History</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Account Modal -->
+<div class="modal fade" id="deleteAccountModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Delete Account</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p><strong>Warning:</strong> This action cannot be undone. All your data will be permanently deleted.</p>
+                <div class="mb-3">
+                    <label class="form-label">Type "DELETE" to confirm:</label>
+                    <input type="text" class="form-control" id="deleteConfirmation">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" onclick="deleteAccount()">Delete Account</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Update Profile
+document.getElementById('updateProfileForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    
+    try {
+        const response = await fetch('/api/profile', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(Object.fromEntries(formData))
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast('Profile updated successfully', 'success');
+        } else {
+            showToast(data.error || 'Failed to update profile', 'danger');
+        }
+    } catch (error) {
+        showToast('Error updating profile', 'danger');
+    }
+});
+
+// Change Password
+document.getElementById('changePasswordForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const newPass = document.getElementById('newPassword').value;
+    const confirmPass = document.getElementById('confirmPassword').value;
+    
+    if (newPass !== confirmPass) {
+        showToast('Passwords do not match', 'danger');
+        return;
+    }
+    
+    const formData = new FormData(this);
+    
+    try {
+        const response = await fetch('/api/change-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(Object.fromEntries(formData))
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast('Password changed successfully', 'success');
+            this.reset();
+        } else {
+            showToast(data.error || 'Failed to change password', 'danger');
+        }
+    } catch (error) {
+        showToast('Error changing password', 'danger');
+    }
+});
+
+// Save Preferences
+document.getElementById('preferencesForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    
+    // Handle checkboxes for question types
+    const questionTypes = formData.getAll('question_types');
+    formData.delete('question_types');
+    
+    const preferences = {
+        default_difficulty: formData.get('default_difficulty'),
+        question_types: questionTypes,
+        email_notifications: formData.get('email_notifications') === 'on'
+    };
+    
+    try {
+        const response = await fetch('/api/preferences', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(preferences)
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast('Preferences saved', 'success');
+        } else {
+            showToast(data.error || 'Failed to save preferences', 'danger');
+        }
+    } catch (error) {
+        showToast('Error saving preferences', 'danger');
+    }
+});
+
+// Clear Quiz History
+async function clearQuizHistory() {
+    try {
+        const response = await fetch('/api/clear-history', { method: 'DELETE' });
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast('Quiz history cleared', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('clearDataModal')).hide();
+        } else {
+            showToast(data.error || 'Failed to clear history', 'danger');
+        }
+    } catch (error) {
+        showToast('Error clearing history', 'danger');
+    }
+}
+
+// Delete Account
+async function deleteAccount() {
+    const confirmation = document.getElementById('deleteConfirmation').value;
+    
+    if (confirmation !== 'DELETE') {
+        showToast('Please type DELETE to confirm', 'warning');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/account', { method: 'DELETE' });
+        const data = await response.json();
+        
+        if (data.success) {
+            window.location.href = '/';
+        } else {
+            showToast(data.error || 'Failed to delete account', 'danger');
+        }
+    } catch (error) {
+        showToast('Error deleting account', 'danger');
+    }
+}
+
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `alert alert-${type} position-fixed bottom-0 end-0 m-3`;
+    toast.style.zIndex = '9999';
+    toast.innerHTML = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+</script>
+{% endblock %}

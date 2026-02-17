@@ -1,0 +1,533 @@
+{% extends "base.html" %}
+
+{% block title %}Learning Progress - Adaptive Quiz Generator{% endblock %}
+
+{% block extra_css %}
+<style>
+  .chart-container { position: relative; height: 300px; margin-bottom: 2rem; }
+  .table td { vertical-align: middle; }
+  .table tbody tr:hover { background-color: #f8f9fa; cursor: pointer; transition: all 0.2s ease; }
+  .grade-badge { font-size: 0.9rem; font-weight: 600; padding: 0.4rem 0.8rem; }
+  .bg-orange { background-color: #fd7e14; }
+  .shadow-sm { box-shadow: 0 0.125rem 0.5rem rgba(0,0,0,0.075) !important; }
+  .card-header.bg-gradient { border: none; }
+  .progress { border-radius: 8px; overflow: hidden; }
+  .progress-bar { font-weight: 600; font-size: 0.85rem; transition: width 0.6s ease; }
+  .badge { font-weight: 600; }
+  .card { border: none; border-radius: 12px; overflow: hidden; }
+  .card-header { border-bottom: 1px solid rgba(0,0,0,0.05); }
+  .list-group-item { border-left: none; border-right: none; }
+  .list-group-item:first-child { border-top: none; }
+  .list-group-item:last-child { border-bottom: none; }
+  .stat-card { transition: transform 0.2s ease; }
+  .stat-card:hover { transform: translateY(-3px); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2><i class="bi bi-graph-up text-primary"></i> Learning Progress</h2>
+        <p class="text-muted">Track your concept mastery, quiz performance, and study history</p>
+    </div>
+</div>
+
+<!-- ========== OVERALL STATS ========== -->
+<div class="row mb-4">
+    <div class="col-md-2 col-6 mb-3">
+        <div class="card text-center bg-primary text-white stat-card shadow-sm">
+            <div class="card-body py-3">
+                <h3 class="mb-0">{{ stats.total_quizzes }}</h3>
+                <small>Quizzes Taken</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2 col-6 mb-3">
+        <div class="card text-center bg-success text-white stat-card shadow-sm">
+            <div class="card-body py-3">
+                <h3 class="mb-0">{{ "%.1f"|format(stats.avg_score) }}%</h3>
+                <small>Average Score</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2 col-6 mb-3">
+        <div class="card text-center bg-info text-white stat-card shadow-sm">
+            <div class="card-body py-3">
+                <h3 class="mb-0">{{ stats.best_score }}%</h3>
+                <small>Best Score</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2 col-6 mb-3">
+        <div class="card text-center bg-warning text-white stat-card shadow-sm">
+            <div class="card-body py-3">
+                <h3 class="mb-0">{{ stats.concepts_mastered }}</h3>
+                <small>Concepts Mastered</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2 col-6 mb-3">
+        <div class="card text-center bg-dark text-white stat-card shadow-sm">
+            <div class="card-body py-3">
+                <h3 class="mb-0">{{ stats.total_correct }}/{{ stats.total_questions_attempted }}</h3>
+                <small>Total Correct</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-2 col-6 mb-3">
+        <div class="card text-center bg-secondary text-white stat-card shadow-sm">
+            <div class="card-body py-3">
+                <h3 class="mb-0">{{ stats.total_time }}</h3>
+                <small>Study Time</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ========== PERFORMANCE GRAPH (PRIMARY) ========== -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-gradient" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <h5 class="mb-0 text-white"><i class="bi bi-graph-up-arrow"></i> Student Performance Over Time</h5>
+                <small class="text-white-50">Your quiz scores plotted as a performance trend graph</small>
+            </div>
+            <div class="card-body">
+                {% if quiz_history %}
+                <canvas id="performanceChart" height="80"></canvas>
+                {% else %}
+                <div class="text-center py-5 text-muted">
+                    <i class="bi bi-graph-up fs-1"></i>
+                    <p class="mt-3">Complete quizzes to see your performance trend</p>
+                    <a href="{{ url_for('quiz.index') }}" class="btn btn-primary">Take Your First Quiz</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ========== QUIZ HISTORY TABLE ========== -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="mb-0"><i class="bi bi-clock-history"></i> Quiz Attempt History</h5>
+                    <small class="text-muted">Complete history of all your quiz attempts with marks and time</small>
+                </div>
+                <span class="badge bg-primary fs-6">{{ quiz_history|length }} Attempts</span>
+            </div>
+            <div class="card-body p-0">
+                {% if quiz_history %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 4%;">#</th>
+                                <th style="width: 20%;">Quiz Name</th>
+                                <th style="width: 10%;">Date</th>
+                                <th style="width: 8%;" class="text-center">Score</th>
+                                <th style="width: 10%;" class="text-center">Marks</th>
+                                <th style="width: 20%;">Performance</th>
+                                <th style="width: 8%;" class="text-center">Questions</th>
+                                <th style="width: 8%;" class="text-center">Time</th>
+                                <th style="width: 6%;" class="text-center">Grade</th>
+                                <th style="width: 6%;" class="text-center">View</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for quiz in quiz_history|reverse %}
+                            <tr>
+                                <td><strong class="text-muted">{{ loop.index }}</strong></td>
+                                <td>
+                                    <strong>{{ quiz.get('quiz_name', 'Quiz') if quiz is mapping else 'Quiz' }}</strong>
+                                </td>
+                                <td>
+                                    <small class="text-muted">
+                                        {% set ts = quiz.get('timestamp', '') %}
+                                        {{ ts[:10] if ts else 'N/A' }}
+                                    </small>
+                                </td>
+                                {% set score_val = quiz.get('score_percentage', quiz.get('score', 0)) or 0 %}
+                                <td class="text-center">
+                                    <strong class="fs-6 {{ 'text-success' if score_val >= 80 else 'text-warning' if score_val >= 60 else 'text-danger' }}">
+                                        {{ "%.0f"|format(score_val) }}%
+                                    </strong>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-{{ 'success' if score_val >= 60 else 'danger' }} fs-6">
+                                        {{ quiz.get('marks_obtained', quiz.get('correct', 0))|int }}/{{ quiz.get('total_marks', quiz.get('total_questions', 0))|int }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="progress" style="height: 22px;">
+                                        <div class="progress-bar {{ 'bg-success' if score_val >= 80 else 'bg-warning' if score_val >= 60 else 'bg-danger' }}" 
+                                             style="width: {{ score_val }}%">
+                                            <span class="px-2">{{ "%.0f"|format(score_val) }}%</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-secondary">
+                                        {{ quiz.get('correct', 0) }}/{{ quiz.get('total_questions', 0) }}
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    <small class="text-muted">
+                                        {{ quiz.get('time_taken_display', 'N/A') }}
+                                    </small>
+                                </td>
+                                <td class="text-center">
+                                    {% if score_val >= 90 %}
+                                    <span class="badge bg-success fs-6"><i class="bi bi-trophy-fill"></i> A+</span>
+                                    {% elif score_val >= 80 %}
+                                    <span class="badge bg-success fs-6">A</span>
+                                    {% elif score_val >= 70 %}
+                                    <span class="badge bg-info fs-6">B</span>
+                                    {% elif score_val >= 60 %}
+                                    <span class="badge bg-warning fs-6">C</span>
+                                    {% elif score_val >= 50 %}
+                                    <span class="badge bg-orange text-white fs-6">D</span>
+                                    {% else %}
+                                    <span class="badge bg-danger fs-6">F</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    {% if quiz.get('attempt_id') and quiz.get('quiz_id') %}
+                                    <a href="{{ url_for('quiz.results', quiz_id=quiz['quiz_id'], attempt_id=quiz['attempt_id']) }}" 
+                                       class="btn btn-sm btn-outline-primary" title="View Details">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5 text-muted">
+                    <i class="bi bi-clipboard-x" style="font-size: 4rem;"></i>
+                    <h5 class="mt-3">No quizzes taken yet</h5>
+                    <p>Start taking quizzes to track your progress!</p>
+                    <a href="{{ url_for('quiz.index') }}" class="btn btn-primary mt-2">
+                        <i class="bi bi-play-fill"></i> Take a Quiz
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ========== CONCEPT MASTERY & ANALYSIS ========== -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="bi bi-bar-chart"></i> Concept Mastery Breakdown</h5>
+                <small class="text-muted">Your understanding level across different concepts</small>
+            </div>
+            <div class="card-body">
+                {% if mastery_labels %}
+                <canvas id="masteryChart" height="300"></canvas>
+                {% else %}
+                <div class="text-center py-4 text-muted">
+                    <i class="bi bi-bar-chart fs-1"></i>
+                    <p class="mt-2">Complete quizzes to see concept mastery</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="bi bi-trophy"></i> Top Concepts</h5>
+                <small class="text-muted">Your strongest areas</small>
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush" id="topConceptsList">
+                    {% for concept in top_concepts %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center px-0" title="{{ concept.name }}">
+                        <span>{{ concept.name[:40] + '...' if concept.name|length > 40 else concept.name }}</span>
+                        <span class="badge bg-success rounded-pill">{{ concept.mastery }}%</span>
+                    </li>
+                    {% else %}
+                    <li class="list-group-item text-muted px-0">Complete quizzes to see mastery</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Marks Distribution Mini Chart -->
+        <div class="card shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="bi bi-pie-chart-fill text-info"></i> Score Distribution</h5>
+            </div>
+            <div class="card-body">
+                {% if quiz_history %}
+                <canvas id="scoreDistChart" height="200"></canvas>
+                {% else %}
+                <p class="text-muted text-center py-3">No data yet</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ========== WEAK CONCEPTS ========== -->
+<div class="row">
+    <div class="col-md-6">
+        <div class="card border-warning">
+            <div class="card-header bg-warning bg-opacity-25">
+                <h5 class="mb-0"><i class="bi bi-exclamation-triangle text-warning"></i> Weak Concepts</h5>
+            </div>
+            <div class="card-body">
+                {% if weak_concepts %}
+                <div class="list-group">
+                    {% for concept, score in weak_concepts %}
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between mb-1">
+                            <strong title="{{ concept }}">{{ concept[:50] + '...' if concept|length > 50 else concept }}</strong>
+                            <span class="text-danger">{{ "%.0f"|format(score * 100) }}%</span>
+                        </div>
+                        <div class="progress" style="height: 6px;">
+                            <div class="progress-bar bg-danger" style="width: {{ score * 100 }}%"></div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted text-center py-3"><i class="bi bi-check-circle-fill text-success"></i><br>No weak concepts! Great job!</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card border-info">
+            <div class="card-header bg-info bg-opacity-25">
+                <h5 class="mb-0"><i class="bi bi-lightbulb text-info"></i> Study Recommendations</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    {% if weak_concepts %}
+                    {% for concept, score in weak_concepts[:3] %}
+                    <div class="list-group-item">
+                        <strong title="{{ concept }}">Focus on {{ concept[:50] + '...' if concept|length > 50 else concept }}</strong>
+                        <small class="d-block text-muted">Current mastery: {{ "%.0f"|format(score * 100) }}% - Target: 70%</small>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <div class="list-group-item">
+                        <strong><i class="bi bi-check-circle text-success"></i> You're all set!</strong>
+                        <small class="d-block text-muted">Keep practicing to maintain your knowledge</small>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Chart.js configuration
+    Chart.defaults.font.family = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
+
+    // ======= MASTERY CHART =======
+    const masteryLabels = {{ mastery_labels | tojson | default('[]') }};
+    const masteryData = {{ mastery_data | tojson | default('[]') }};
+
+    if (masteryLabels.length > 0) {
+        new Chart(document.getElementById('masteryChart'), {
+            type: 'bar',
+            data: {
+                labels: masteryLabels,
+                datasets: [{
+                    label: 'Mastery Level (%)',
+                    data: masteryData,
+                    backgroundColor: masteryData.map(v => v >= 70 ? '#198754' : v >= 50 ? '#ffc107' : '#dc3545'),
+                    borderWidth: 0,
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                indexAxis: 'y',
+                scales: { x: { beginAtZero: true, max: 100 } },
+                plugins: { 
+                    legend: { display: true },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return 'Mastery: ' + context.parsed.x.toFixed(1) + '%';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // ======= PERFORMANCE OVER TIME CHART (PRIMARY) =======
+    const performanceLabels = {{ performance_labels | tojson | default('[]') }};
+    const performanceData = {{ performance_data | tojson | default('[]') }};
+
+    if (performanceLabels.length > 0) {
+        const ctx = document.getElementById('performanceChart');
+        
+        // Create gradient
+        const gradient = ctx.getContext('2d').createLinearGradient(0, 0, 0, 450);
+        gradient.addColorStop(0, 'rgba(102, 126, 234, 0.6)');
+        gradient.addColorStop(0.5, 'rgba(118, 75, 162, 0.3)');
+        gradient.addColorStop(1, 'rgba(118, 75, 162, 0.0)');
+        
+        // Calculate average line
+        const avgScore = performanceData.reduce((a, b) => a + b, 0) / performanceData.length;
+        const avgLine = performanceData.map(() => avgScore);
+        
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: performanceLabels,
+                datasets: [
+                    {
+                        label: 'Quiz Score (%)',
+                        data: performanceData,
+                        borderColor: '#667eea',
+                        backgroundColor: gradient,
+                        borderWidth: 4,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 8,
+                        pointHoverRadius: 12,
+                        pointBackgroundColor: performanceData.map(v => 
+                            v >= 80 ? '#198754' : v >= 60 ? '#ffc107' : '#dc3545'
+                        ),
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 3,
+                        pointHoverBorderWidth: 4
+                    },
+                    {
+                        label: 'Average (' + avgScore.toFixed(1) + '%)',
+                        data: avgLine,
+                        borderColor: 'rgba(220, 53, 69, 0.5)',
+                        borderWidth: 2,
+                        borderDash: [10, 5],
+                        fill: false,
+                        pointRadius: 0,
+                        pointHoverRadius: 0
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                scales: { 
+                    y: { 
+                        beginAtZero: true, 
+                        max: 100,
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.05)',
+                        },
+                        ticks: {
+                            font: { size: 12, weight: 'bold' },
+                            callback: function(value) { return value + '%'; }
+                        }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: {
+                            maxRotation: 45,
+                            minRotation: 30,
+                            font: { size: 10 }
+                        }
+                    }
+                },
+                plugins: { 
+                    legend: { 
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            font: { size: 14, weight: 'bold' },
+                            padding: 20
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                        padding: 16,
+                        titleFont: { size: 14, weight: 'bold' },
+                        bodyFont: { size: 13 },
+                        callbacks: {
+                            title: function(context) {
+                                return context[0].label.replace('\\n', ' ');
+                            },
+                            label: function(context) {
+                                if (context.datasetIndex === 1) return 'Average: ' + context.parsed.y.toFixed(1) + '%';
+                                return 'Score: ' + context.parsed.y.toFixed(1) + '%';
+                            },
+                            afterLabel: function(context) {
+                                if (context.datasetIndex === 1) return '';
+                                const score = context.parsed.y;
+                                let grade = 'F';
+                                if (score >= 90) grade = 'A+';
+                                else if (score >= 80) grade = 'A';
+                                else if (score >= 70) grade = 'B';
+                                else if (score >= 60) grade = 'C';
+                                else if (score >= 50) grade = 'D';
+                                return 'Grade: ' + grade;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // ======= SCORE DISTRIBUTION PIE CHART =======
+    {% if quiz_history %}
+    const allScores = {{ performance_data | tojson | default('[]') }};
+    if (allScores.length > 0) {
+        let excellent = 0, good = 0, average = 0, poor = 0;
+        allScores.forEach(s => {
+            if (s >= 80) excellent++;
+            else if (s >= 60) good++;
+            else if (s >= 40) average++;
+            else poor++;
+        });
+        
+        new Chart(document.getElementById('scoreDistChart'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Excellent (80%+)', 'Good (60-79%)', 'Average (40-59%)', 'Poor (<40%)'],
+                datasets: [{
+                    data: [excellent, good, average, poor],
+                    backgroundColor: ['#198754', '#ffc107', '#fd7e14', '#dc3545'],
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { font: { size: 11 }, padding: 10 }
+                    }
+                }
+            }
+        });
+    }
+    {% endif %}
+</script>
+{% endblock %}

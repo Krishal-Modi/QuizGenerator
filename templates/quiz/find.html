@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block title %}Find Quiz - Quiz Generator{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <!-- Find Quiz Card -->
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-5">
+                    <div class="text-center mb-4">
+                        <i class="fas fa-search fa-3x text-primary mb-3"></i>
+                        <h1 class="card-title h2">Find Quiz by Code</h1>
+                        <p class="text-muted">Enter the 16-digit quiz code to find and attempt a quiz</p>
+                    </div>
+
+                    <form method="POST" class="mb-4">
+                        <div class="mb-3">
+                            <label for="quiz_code" class="form-label fw-bold">Quiz Code</label>
+                            <input 
+                                type="text" 
+                                class="form-control form-control-lg text-uppercase" 
+                                id="quiz_code" 
+                                name="quiz_code" 
+                                placeholder="Enter 16-digit code"
+                                maxlength="16"
+                                pattern="[0-9A-Z]{16}"
+                                required
+                                autofocus
+                                style="font-family: 'Courier New', monospace; font-weight: bold; letter-spacing: 2px;"
+                            >
+                            <small class="form-text text-muted d-block mt-2">
+                                Codes are 16 characters (mix of letters and numbers)
+                            </small>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary btn-lg w-100 fw-bold">
+                            <i class="fas fa-arrow-right me-2"></i>Search
+                        </button>
+                    </form>
+
+                    <!-- Divider -->
+                    <hr class="my-4">
+
+                    <!-- Info Section -->
+                    <div class="bg-light p-4 rounded-3 mb-4">
+                        <h6 class="fw-bold text-dark mb-3">
+                            <i class="fas fa-info-circle me-2 text-info"></i>How to Find a Quiz
+                        </h6>
+                        <ul class="list-unstyled small text-muted">
+                            <li><i class="fas fa-check-circle text-success me-2"></i>Ask your instructor for the quiz code</li>
+                            <li><i class="fas fa-check-circle text-success me-2"></i>Enter the 16-digit code above</li>
+                            <li><i class="fas fa-check-circle text-success me-2"></i>Click Search to access the quiz</li>
+                            <li><i class="fas fa-check-circle text-success me-2"></i>If the quiz is password-protected, you'll be asked for the password</li>
+                        </ul>
+                    </div>
+
+                    <!-- Navigation -->
+                    <div class="text-center">
+                        {% if session.get('user_id') %}
+                        <a href="{{ url_for('quiz.index') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Back to Quizzes
+                        </a>
+                        {% else %}
+                        <p class="text-muted mb-3">Don't have an account?</p>
+                        <a href="{{ url_for('auth.signup') }}" class="btn btn-outline-primary me-2">Create Account</a>
+                        <a href="{{ url_for('auth.login') }}" class="btn btn-primary">Login</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Example Code Card -->
+            <div class="card shadow-sm border-0 mt-4 bg-light">
+                <div class="card-body">
+                    <p class="text-muted small mb-0">
+                        <i class="fas fa-lightbulb me-2 text-warning"></i>
+                        Example code format: <code style="font-weight: bold; color: #333;">A7K2M9P1Q5X8L3N6</code>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .form-control:focus {
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    }
+    
+    #quiz_code {
+        letter-spacing: 3px;
+    }
+</style>
+{% endblock %}

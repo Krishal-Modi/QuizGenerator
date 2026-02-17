@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+
+{% block title %}Adaptive Quiz Generator - AI-Powered Learning{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero-section text-center py-5 bg-light rounded-3 mb-5">
+    <div class="container">
+        <h1 class="display-4 fw-bold mb-3">
+            <i class="bi bi-lightbulb text-warning"></i> Adaptive AI Quiz Generator
+        </h1>
+        <p class="lead text-muted mb-4">
+            Transform your lecture notes into personalized quizzes that adapt to your learning needs.
+            Our AI-powered system identifies your weak concepts and helps you master them efficiently.
+        </p>
+        <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
+            {% if session.get('user_id') %}
+            <a href="{{ url_for('quiz.index') }}" class="btn btn-primary btn-lg px-4 gap-3">
+                <i class="bi bi-play-circle"></i> Start Learning
+            </a>
+            <a href="{{ url_for('dashboard.index') }}" class="btn btn-outline-secondary btn-lg px-4">
+                <i class="bi bi-speedometer2"></i> Dashboard
+            </a>
+            {% else %}
+            <a href="{{ url_for('auth.signup') }}" class="btn btn-primary btn-lg px-4 gap-3">
+                <i class="bi bi-person-plus"></i> Get Started Free
+            </a>
+            <a href="{{ url_for('auth.login') }}" class="btn btn-outline-secondary btn-lg px-4">
+                <i class="bi bi-box-arrow-in-right"></i> Login
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+<!-- Features Section -->
+<section class="features py-5">
+    <div class="container">
+        <h2 class="text-center mb-5">How It Works</h2>
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body text-center">
+                        <div class="feature-icon bg-primary bg-gradient text-white rounded-circle p-3 mb-3 d-inline-block">
+                            <i class="bi bi-file-earmark-pdf fs-1"></i>
+                        </div>
+                        <h4>1. Upload Notes</h4>
+                        <p class="text-muted">
+                            Upload your lecture notes in PDF, TXT, or DOCX format. 
+                            Our AI extracts key concepts and builds a knowledge graph.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body text-center">
+                        <div class="feature-icon bg-success bg-gradient text-white rounded-circle p-3 mb-3 d-inline-block">
+                            <i class="bi bi-cpu fs-1"></i>
+                        </div>
+                        <h4>2. AI Generation</h4>
+                        <p class="text-muted">
+                            Our transformer-based AI generates MCQs, True/False, and Short Answer 
+                            questions tagged with concepts and difficulty levels.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body text-center">
+                        <div class="feature-icon bg-warning bg-gradient text-white rounded-circle p-3 mb-3 d-inline-block">
+                            <i class="bi bi-graph-up-arrow fs-1"></i>
+                        </div>
+                        <h4>3. Adaptive Learning</h4>
+                        <p class="text-muted">
+                            Multi-Armed Bandit algorithms select questions that target your 
+                            weak concepts while maintaining topic coverage.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Key Features Section -->
+<section class="py-5 bg-light rounded-3 my-5">
+    <div class="container">
+        <h2 class="text-center mb-5">Key Features</h2>
+        <div class="row g-4">
+            <div class="col-md-6">
+                <div class="d-flex align-items-start">
+                    <div class="flex-shrink-0">
+                        <i class="bi bi-diagram-3 fs-2 text-primary"></i>
+                    </div>
+                    <div class="ms-3">
+                        <h5>Concept Knowledge Graph</h5>
+                        <p class="text-muted">Visualize concept relationships and track your mastery across topics.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="d-flex align-items-start">
+                    <div class="flex-shrink-0">
+                        <i class="bi bi-shuffle fs-2 text-primary"></i>
+                    </div>
+                    <div class="ms-3">
+                        <h5>Thompson Sampling</h5>
+                        <p class="text-muted">Advanced bandit algorithm balances exploration and exploitation for optimal learning.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="d-flex align-items-start">
+                    <div class="flex-shrink-0">
+                        <i class="bi bi-lock fs-2 text-primary"></i>
+                    </div>
+                    <div class="ms-3">
+                        <h5>Password-Protected Quizzes</h5>
+                        <p class="text-muted">Instructors can create secure quizzes for assessments and exams.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="d-flex align-items-start">
+                    <div class="flex-shrink-0">
+                        <i class="bi bi-bar-chart fs-2 text-primary"></i>
+                    </div>
+                    <div class="ms-3">
+                        <h5>Detailed Analytics</h5>
+                        <p class="text-muted">Track learning progress, concept mastery, and performance trends over time.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Technology Stack -->
+<section class="py-5">
+    <div class="container">
+        <h2 class="text-center mb-5">Powered By</h2>
+        <div class="row text-center g-4">
+            <div class="col-4 col-md-2">
+                <div class="p-3">
+                    <i class="bi bi-file-code fs-1 text-muted"></i>
+                    <p class="small mb-0">Python</p>
+                </div>
+            </div>
+            <div class="col-4 col-md-2">
+                <div class="p-3">
+                    <i class="bi bi-hdd-network fs-1 text-muted"></i>
+                    <p class="small mb-0">Flask</p>
+                </div>
+            </div>
+            <div class="col-4 col-md-2">
+                <div class="p-3">
+                    <i class="bi bi-magic fs-1 text-muted"></i>
+                    <p class="small mb-0">Transformers</p>
+                </div>
+            </div>
+            <div class="col-4 col-md-2">
+                <div class="p-3">
+                    <i class="bi bi-cloud fs-1 text-muted"></i>
+                    <p class="small mb-0">Firebase</p>
+                </div>
+            </div>
+            <div class="col-4 col-md-2">
+                <div class="p-3">
+                    <i class="bi bi-braces fs-1 text-muted"></i>
+                    <p class="small mb-0">spaCy</p>
+                </div>
+            </div>
+            <div class="col-4 col-md-2">
+                <div class="p-3">
+                    <i class="bi bi-bootstrap fs-1 text-muted"></i>
+                    <p class="small mb-0">Bootstrap</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA Section -->
+<section class="py-5 bg-primary text-white rounded-3">
+    <div class="container text-center">
+        <h2 class="mb-3">Ready to Learn Smarter?</h2>
+        <p class="lead mb-4">Join now and experience personalized, AI-driven quiz learning.</p>
+        {% if not session.get('user_id') %}
+        <a href="{{ url_for('auth.signup') }}" class="btn btn-light btn-lg">
+            <i class="bi bi-rocket-takeoff"></i> Start Free
+        </a>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}
