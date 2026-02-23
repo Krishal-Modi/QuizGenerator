@@ -416,42 +416,69 @@ class QuestionGenerator:
     
     def _generate_question_rule_based(self, context: str, concept: str,
                                       q_type: str) -> Optional[str]:
-        """Generate question using rule-based templates that create meaningful questions"""
-        templates = {
-            'mcq': [
-                f"Which of the following best describes {concept}?",
-                f"What is {concept}?",
-                f"Which statement about {concept} is correct?",
-                f"The term {concept} refers to:",
-                f"What is the main characteristic of {concept}?",
-                f"How is {concept} defined in this context?",
-                f"Which definition best fits the concept of {concept}?",
-                f"What role does {concept} play in the displayed information?",
-                f"Which of the following is an example of {concept}?",
-                f"What are the key attributes of {concept}?",
-                f"According to the passage, {concept} is primarily associated with:",
-                f"What distinguishes {concept} from similar concepts?",
-            ],
-            'short_answer': [
-                f"Define {concept} in your own words.",
-                f"Explain what {concept} means and its significance.",
-                f"What is the purpose and importance of {concept}?",
-                f"Describe {concept} and how it works.",
-                f"How does {concept} function in this context?",
-                f"What are the main characteristics of {concept}?",
-                f"Explain the relationship between {concept} and the main topic.",
-                f"Why is {concept} important to understanding this topic?",
-                f"Summarize the key points about {concept}.",
-                f"What are the practical applications of {concept}?",
-            ],
-            'true_false': [
-                f"{concept} is a fundamental concept in this field.",
-                f"The definition of {concept} is clearly explained in the passage.",
-            ]
-        }
+        """Generate logical, context-aware questions using intelligent templates"""
+        # Extract key information from context
+        sentences = [s.strip() for s in re.split(r'[.!?]', context) if len(s.strip()) > 20]
+        concept_sentences = [s for s in sentences if concept.lower() in s.lower()]
         
-        template_list = templates.get(q_type, templates['mcq'])
-        return random.choice(template_list)
+        # Analyze context to create better questions
+        has_definition = any(word in context.lower() for word in ['is', 'are', 'defined as', 'refers to', 'means'])
+        has_process = any(word in context.lower() for word in ['how', 'process', 'steps', 'method', 'procedure'])
+        has_comparison = any(word in context.lower() for word in ['compared to', 'versus', 'different from', 'similar to'])
+        has_purpose = any(word in context.lower() for word in ['purpose', 'used for', 'helps', 'enables', 'allows'])
+        
+        if q_type == 'mcq':
+            if has_definition:
+                templates = [
+                    f"How is {concept} defined in the context?",
+                    f"What does {concept} mean?",
+                    f"Which of the following best describes {concept}?",
+                ]
+            elif has_process:
+                templates = [
+                    f"How does {concept} work?",
+                    f"What is the process involved in {concept}?",
+                    f"Which of the following describes how {concept} functions?",
+                ]
+            elif has_comparison:
+                templates = [
+                    f"How does {concept} compare to similar concepts?",
+                    f"What distinguishes {concept} from related ideas?",
+                    f"Which characteristic is unique to {concept}?",
+                ]
+            elif has_purpose:
+                templates = [
+                    f"What is the primary purpose of {concept}?",
+                    f"Why is {concept} used?",
+                    f"What problem does {concept} solve?",
+                ]
+            else:
+                templates = [
+                    f"What is the key characteristic of {concept}?",
+                    f"Which statement about {concept} is correct?",
+                    f"According to the material, what is {concept}?",
+                    f"Which of the following applies to {concept}?",
+                ]
+        
+        elif q_type == 'short_answer':
+            templates = [
+                f"Explain what {concept} is and why it matters.",
+                f"Describe {concept} in your own words.",
+                f"What are the key aspects of {concept}?",
+                f"Define {concept} based on the material.",
+                f"How would you explain {concept} to someone unfamiliar with it?",
+            ]
+        
+        elif q_type == 'true_false':
+            # For T/F, we need the actual statement generation logic elsewhere
+            templates = [
+                f"{concept} is discussed in the material.",
+            ]
+        
+        else:
+            templates = [f"What is {concept}?"]
+        
+        return random.choice(templates)
     
     def _generate_statement_with_model(self, context: str, concept: str,
                                        is_true: bool) -> Optional[str]:
@@ -552,17 +579,56 @@ class QuestionGenerator:
             return None
     
     def _extract_answer(self, text: str, concept: str, question: str) -> str:
-        """Extract answer from text"""
-        # Find sentences containing the concept
-        sentences = re.split(r'[.!?]', text)
-        relevant = [s.strip() for s in sentences 
-                   if concept.lower() in s.lower() and len(s) > 20]
+        """Extract logical, accurate answer from text - searches FULL document"""
+        # Find relevant context from full document
+        context = self._get_best_context_for_concept(text, concept, context_size=2000)
+        
+        if not context:
+            return concept
+        
+        # Analyze question to determine what kind of answer is needed
+        question_lower = question.lower()
+        is_definition = any(word in question_lower for word in ['what is', 'define', 'describes', 'definition'])
+        is_purpose = any(word in question_lower for word in ['why', 'purpose', 'used for'])
+        is_process = any(word in question_lower for word in ['how', 'process', 'work', 'function'])
+        
+        # Try to find most relevant sentences based on question type
+        sentences = [s.strip() for s in re.split(r'[.!?]', context) if len(s.strip()) > 15]
+        
+        if is_definition:
+            # Look for definition patterns
+            for s in sentences:
+                if concept.lower() in s.lower():
+                    if any(pattern in s.lower() for pattern in ['is', 'refers to', 'defined as', 'means']):
+                        # Extract the definition part
+                        match = re.search(rf'{re.escape(concept)}\s+(is|refers to|means|defined as)\s+(.+)', s, re.IGNORECASE)
+                        if match:
+                            return match.group(2).strip()[:200]
+        
+        elif is_purpose:
+            # Look for purpose patterns
+            for s in sentences:
+                if concept.lower() in s.lower():
+                    if any(pattern in s.lower() for pattern in ['used for', 'purpose', 'helps', 'enables', 'allows']):
+                        return s[:200]
+        
+        elif is_process:
+            # Look for process descriptions
+            for s in sentences:
+                if concept.lower() in s.lower():
+                    if any(pattern in s.lower() for pattern in ['process', 'steps', 'how', 'method', 'by']):
+                        return s[:200]
+        
+        # Fallback: find most informative sentence containing the concept
+        relevant = [s for s in sentences if concept.lower() in s.lower()]
         
         if relevant:
-            # Return the most informative sentence
-            return max(relevant, key=len)[:200]
+            # Prioritize longer, more informative sentences
+            best_sentence = max(relevant, key=lambda x: (len(x), x.count(',')))
+            return best_sentence[:250] if len(best_sentence) <= 250 else best_sentence[:247] + '...'
         
-        return concept
+        # Last resort: return concept with context
+        return f"{concept}: " + context[:150].strip() + "..."
     
     def _generate_distractors(self, concept: str, all_concepts: List[Dict],
                               knowledge_graph: Dict, correct_answer: str) -> List[str]:

@@ -120,17 +120,35 @@ def progress():
         'total_questions_attempted': sum(q.get('total_questions', 0) for q in quiz_history if isinstance(q, dict))
     }
     
-    # Prepare mastery chart data - safely handle non-numeric values
-    mastery_labels = [str(c)[:40] for c in list(concept_mastery.keys())[:10]]
+    # Prepare mastery chart data with ML-enhanced analytics
+    # Calculate detailed concept performance metrics
+    try:
+        concept_performance = calculate_concept_performance(quiz_history, concept_mastery)
+    except Exception as e:
+        print(f"Error calculating concept performance: {e}")
+        concept_performance = {}
+    
+    mastery_labels = []
     mastery_data = []
-    for c in list(concept_mastery.keys())[:10]:
-        val = concept_mastery.get(c, 0)
-        try:
-            val = float(val) * 100
-            val = min(max(val, 0), 100)  # Clamp 0-100
-        except (ValueError, TypeError):
-            val = 0
-        mastery_data.append(round(val, 1))
+    mastery_trend = []  # Learning trend indicator
+    mastery_predicted = []  # Predicted next performance
+    
+    if concept_mastery:
+        mastery_labels = [str(c)[:40] for c in list(concept_mastery.keys())[:10]]
+        
+        for c in list(concept_mastery.keys())[:10]:
+            val = concept_mastery.get(c, 0)
+            try:
+                val = float(val) * 100
+                val = min(max(val, 0), 100)  # Clamp 0-100
+            except (ValueError, TypeError):
+                val = 0
+            mastery_data.append(round(val, 1))
+            
+            # Calculate learning trend (positive/negative growth)
+            perf = concept_performance.get(c, {})
+            mastery_trend.append(perf.get('trend', 0))
+            mastery_predicted.append(perf.get('predicted', val))
     
     # Prepare performance over time chart data with quiz names and dates
     performance_labels = []
@@ -176,16 +194,29 @@ def progress():
     # Get weak concepts
     weak_concepts = get_weak_concepts(concept_mastery)
     
+    # Debug output
+    print(f"[Progress Page Debug]")
+    print(f"  Total quizzes: {len(quiz_history)}")
+    print(f"  Concepts tracked: {len(concept_mastery)}")
+    print(f"  Mastery labels: {len(mastery_labels)}")
+    print(f"  Mastery data points: {len(mastery_data)}")
+    print(f"  Has data for graph: {len(mastery_labels) > 0 and len(mastery_data) > 0}")
+    if mastery_labels:
+        print(f"  First concept: {mastery_labels[0]} = {mastery_data[0]}%")
+    
     return render_template('dashboard/progress.html',
                          stats=stats,
                          concept_mastery=concept_mastery,
                          quiz_history=quiz_history,
                          mastery_labels=mastery_labels,
                          mastery_data=mastery_data,
+                         mastery_trend=mastery_trend,
+                         mastery_predicted=mastery_predicted,
                          performance_labels=performance_labels,
                          performance_data=performance_data,
                          top_concepts=top_concepts,
-                         weak_concepts=weak_concepts)
+                         weak_concepts=weak_concepts,
+                         concept_performance=concept_performance)
 
 
 @dashboard_bp.route('/knowledge-graph')
@@ -237,3 +268,94 @@ def get_weak_concepts(concept_mastery, threshold=0.5, limit=5):
             if score < threshold]
     weak.sort(key=lambda x: x[1])
     return weak[:limit]
+
+
+def calculate_concept_performance(quiz_history, concept_mastery):
+    """Calculate ML-enhanced performance metrics for each concept"""
+    try:
+        import numpy as np
+    except ImportError:
+        print("NumPy not available, using basic calculations")
+        # Fallback to basic calculations without NumPy
+        performance = {}
+        for concept, current_mastery in concept_mastery.items():
+            current_percent = float(current_mastery) * 100
+            performance[concept] = {
+                'current': round(current_percent, 1),
+                'trend': 0,
+                'predicted': round(current_percent, 1),
+                'learning_rate': 0,
+                'consistency': 50,
+                'attempts': 0
+            }
+        return performance
+    
+    from collections import defaultdict
+    
+    performance = {}
+    concept_history = defaultdict(list)
+    
+    # Collect historical performance for each concept
+    for quiz in quiz_history:
+        if not isinstance(quiz, dict):
+            continue
+        
+        quiz_concepts = quiz.get('concepts', [])
+        score = quiz.get('score_percentage', quiz.get('score', 0)) or 0
+        
+        # If quiz doesn't track individual concepts, use overall concepts
+        if not quiz_concepts:
+            quiz_concepts = list(concept_mastery.keys())
+        
+        for concept in quiz_concepts:
+            concept_history[concept].append(float(score))
+    
+    # Calculate metrics for each concept
+    for concept, current_mastery in concept_mastery.items():
+        scores = concept_history.get(concept, [])
+        current_percent = float(current_mastery) * 100
+        
+        if len(scores) >= 2:
+            # Calculate learning trend (slope of performance over time)
+            x = np.arange(len(scores))
+            y = np.array(scores)
+            
+            # Simple linear regression for trend
+            if len(x) > 1:
+                slope = np.polyfit(x, y, 1)[0]
+                trend = round(slope, 2)
+                
+                # Predict next performance using trend
+                predicted = current_percent + (trend * 2)
+                predicted = min(max(predicted, 0), 100)
+            else:
+                trend = 0
+                predicted = current_percent
+            
+            # Calculate learning rate (recent improvement)
+            if len(scores) >= 3:
+                recent_avg = np.mean(scores[-3:])
+                early_avg = np.mean(scores[:3]) if len(scores) > 3 else scores[0]
+                learning_rate = recent_avg - early_avg
+            else:
+                learning_rate = 0
+            
+            # Calculate consistency (standard deviation - lower is more consistent)
+            consistency = 100 - min(np.std(scores), 100)
+            
+        else:
+            trend = 0
+            predicted = current_percent
+            learning_rate = 0
+            consistency = 50
+        
+        performance[concept] = {
+            'current': round(current_percent, 1),
+            'trend': trend,
+            'predicted': round(predicted, 1),
+            'learning_rate': round(learning_rate, 1),
+            'consistency': round(consistency, 1),
+            'attempts': len(scores)
+        }
+    
+    return performance

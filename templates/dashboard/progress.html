@@ -225,17 +225,38 @@
 <div class="row mb-4">
     <div class="col-md-8">
         <div class="card shadow-sm">
-            <div class="card-header bg-white">
-                <h5 class="mb-0"><i class="bi bi-bar-chart"></i> Concept Mastery Breakdown</h5>
-                <small class="text-muted">Your understanding level across different concepts</small>
+            <div class="card-header bg-gradient" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                <h5 class="mb-0 text-white"><i class="bi bi-bar-chart"></i> Concept Mastery Breakdown</h5>
+                <small class="text-white-50">Performance analysis with ML-powered insights showing your mastery percentage</small>
             </div>
             <div class="card-body">
-                {% if mastery_labels %}
-                <canvas id="masteryChart" height="300"></canvas>
+                {% if mastery_labels and mastery_labels|length > 0 %}
+                <div class="mb-3">
+                    <canvas id="masteryChart" height="350"></canvas>
+                </div>
+                <div class="alert alert-info mb-0" style="background: linear-gradient(90deg, #e3f2fd 0%, #bbdefb 100%); border: none;">
+                    <i class="bi bi-info-circle"></i> <strong>Smart Analytics:</strong> 
+                    <span class="small">Current mastery (%), predicted performance, and learning trends calculated using machine learning algorithms</span>
+                </div>
                 {% else %}
-                <div class="text-center py-4 text-muted">
-                    <i class="bi bi-bar-chart fs-1"></i>
-                    <p class="mt-2">Complete quizzes to see concept mastery</p>
+                <div class="text-center py-5 text-muted">
+                    <i class="bi bi-bar-chart fs-1 mb-3" style="font-size: 4rem;"></i>
+                    <h5>No Concept Mastery Data Yet</h5>
+                    <p class="mb-3">Take quizzes to start tracking your concept mastery!</p>
+                    <a href="{{ url_for('quiz.index') }}" class="btn btn-primary">
+                        <i class="bi bi-play-circle"></i> Take a Quiz
+                    </a>
+                    <div class="mt-4 p-3" style="background-color: #f8f9fa; border-radius: 8px; max-width: 500px; margin: 0 auto;">
+                        <small class="text-muted">
+                            <strong>💡 How it works:</strong><br>
+                            After completing quizzes, this section will display:
+                            <ul class="text-start mt-2 mb-0">
+                                <li>Your mastery percentage for each concept</li>
+                                <li>ML-predicted future performance</li>
+                                <li>Learning trends and improvement rates</li>
+                            </ul>
+                        </small>
+                    </div>
                 </div>
                 {% endif %}
             </div>
@@ -332,46 +353,183 @@
 </div>
 {% endblock %}
 
-{% block scripts %}
+{% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     // Chart.js configuration
     Chart.defaults.font.family = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
 
-    // ======= MASTERY CHART =======
+    // Debug: Log data being passed to charts
+    console.log('=== Progress Page Debug Info ===');
+    console.log('Mastery Labels:', {{ mastery_labels | tojson | default('[]') }});
+    console.log('Mastery Data:', {{ mastery_data | tojson | default('[]') }});
+    console.log('Performance Labels:', {{ performance_labels | tojson | default('[]') }});
+    console.log('Performance Data:', {{ performance_data | tojson | default('[]') }});
+
+    // ======= ENHANCED MASTERY CHART WITH ML ANALYTICS =======
     const masteryLabels = {{ mastery_labels | tojson | default('[]') }};
     const masteryData = {{ mastery_data | tojson | default('[]') }};
+    const masteryTrend = {{ mastery_trend | tojson | default('[]') }};
+    const masteryPredicted = {{ mastery_predicted | tojson | default('[]') }};
 
-    if (masteryLabels.length > 0) {
-        new Chart(document.getElementById('masteryChart'), {
-            type: 'bar',
-            data: {
-                labels: masteryLabels,
-                datasets: [{
-                    label: 'Mastery Level (%)',
-                    data: masteryData,
-                    backgroundColor: masteryData.map(v => v >= 70 ? '#198754' : v >= 50 ? '#ffc107' : '#dc3545'),
-                    borderWidth: 0,
-                    borderRadius: 4
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                indexAxis: 'y',
-                scales: { x: { beginAtZero: true, max: 100 } },
-                plugins: { 
-                    legend: { display: true },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return 'Mastery: ' + context.parsed.x.toFixed(1) + '%';
+    console.log('Mastery Chart Data:', { masteryLabels, masteryData, masteryTrend, masteryPredicted });
+
+    if (masteryLabels && masteryLabels.length > 0 && masteryData && masteryData.length > 0) {
+        try {
+            const masteryCtx = document.getElementById('masteryChart');
+            if (!masteryCtx) {
+                console.error('Mastery chart canvas not found');
+            } else {
+                new Chart(masteryCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: masteryLabels,
+                        datasets: [
+                            {
+                                label: 'Current Mastery (%)',
+                                data: masteryData,
+                                backgroundColor: masteryData.map(v => {
+                                    if (v >= 80) return 'rgba(25, 135, 84, 0.8)';
+                                    if (v >= 70) return 'rgba(13, 202, 240, 0.8)';
+                                    if (v >= 50) return 'rgba(255, 193, 7, 0.8)';
+                                    return 'rgba(220, 53, 69, 0.8)';
+                                }),
+                                borderColor: masteryData.map(v => {
+                                    if (v >= 80) return '#198754';
+                                    if (v >= 70) return '#0dcaf0';
+                                    if (v >= 50) return '#ffc107';
+                                    return '#dc3545';
+                                }),
+                                borderWidth: 2,
+                                borderRadius: 6,
+                                barThickness: 'flex',
+                                maxBarThickness: 35
+                            },
+                            {
+                                label: 'Predicted Performance (%)',
+                                data: masteryPredicted && masteryPredicted.length > 0 ? masteryPredicted : masteryData,
+                                backgroundColor: 'rgba(102, 126, 234, 0.3)',
+                                borderColor: '#667eea',
+                                borderWidth: 2,
+                                borderDash: [5, 5],
+                                borderRadius: 6,
+                                barThickness: 'flex',
+                                maxBarThickness: 25
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        indexAxis: 'y',
+                        scales: { 
+                            x: { 
+                                beginAtZero: true, 
+                                max: 100,
+                                grid: {
+                                    color: 'rgba(0, 0, 0, 0.05)',
+                                },
+                                ticks: {
+                                    font: { size: 12, weight: 'bold' },
+                                    callback: function(value) {
+                                        return value + '%';
+                                    }
+                                }
+                            },
+                            y: {
+                                grid: { display: false },
+                                ticks: {
+                                    font: { size: 11 },
+                                    callback: function(value, index) {
+                                        const label = this.getLabelForValue(value);
+                                        return label.length > 30 ? label.substring(0, 27) + '...' : label;
+                                    }
+                                }
+                            }
+                        },
+                        plugins: { 
+                            legend: { 
+                                display: true,
+                                position: 'top',
+                                labels: {
+                                    font: { size: 13, weight: 'bold' },
+                                    padding: 15,
+                                    usePointStyle: true
+                                }
+                            },
+                            tooltip: {
+                                backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                                padding: 16,
+                                titleFont: { size: 14, weight: 'bold' },
+                                bodyFont: { size: 13 },
+                                callbacks: {
+                                    title: function(context) {
+                                        return context[0].label;
+                                    },
+                                    label: function(context) {
+                                        const value = context.parsed.x;
+                                        const datasetLabel = context.dataset.label;
+                                        return datasetLabel + ': ' + value.toFixed(1) + '%';
+                                    },
+                                    afterBody: function(context) {
+                                        const index = context[0].dataIndex;
+                                        const trend = masteryTrend && masteryTrend[index] !== undefined ? masteryTrend[index] : 0;
+                                        const current = masteryData[index];
+                                        
+                                        let trendText = '\\n📊 Learning Trend: ';
+                                        if (trend > 2) trendText += '📈 Rapidly Improving (+' + trend.toFixed(1) + '%)';
+                                        else if (trend > 0) trendText += '↗️ Improving (+' + trend.toFixed(1) + '%)';
+                                        else if (trend < -2) trendText += '📉 Declining (' + trend.toFixed(1) + '%)';
+                                        else if (trend < 0) trendText += '↘️ Slight Decline (' + trend.toFixed(1) + '%)';
+                                        else trendText += '➡️ Stable';
+                                        
+                                        let statusText = '\\n\\n🎯 Status: ';
+                                        if (current >= 80) statusText += 'Mastered! 🏆';
+                                        else if (current >= 70) statusText += 'Advanced 🌟';
+                                        else if (current >= 50) statusText += 'Learning 📚';
+                                        else statusText += 'Needs Practice ⚠️';
+                                        
+                                        return [trendText, statusText];
+                                    }
+                                }
+                            }
+                        },
+                        layout: {
+                            padding: {
+                                right: 20
                             }
                         }
-                    }
-                }
+                    },
+                    plugins: [{
+                        afterDatasetsDraw: function(chart) {
+                            const ctx = chart.ctx;
+                            chart.data.datasets[0].data.forEach((value, index) => {
+                                const meta = chart.getDatasetMeta(0);
+                                const bar = meta.data[index];
+                                
+                                if (bar) {
+                                    ctx.save();
+                                    ctx.font = 'bold 12px Arial';
+                                    ctx.fillStyle = '#000';
+                                    ctx.textAlign = 'left';
+                                    ctx.textBaseline = 'middle';
+                                    
+                                    const text = value.toFixed(1) + '%';
+                                    const padding = 5;
+                                    ctx.fillText(text, bar.x + padding, bar.y);
+                                    ctx.restore();
+                                }
+                            });
+                        }
+                    }]
+                });
+                console.log('Mastery chart created successfully');
             }
-        });
+        } catch (error) {
+            console.error('Error creating mastery chart:', error);
+        }
+    } else {
+        console.log('No mastery data available for chart');
     }
 
     // ======= PERFORMANCE OVER TIME CHART (PRIMARY) =======

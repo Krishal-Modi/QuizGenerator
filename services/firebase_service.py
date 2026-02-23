@@ -265,8 +265,16 @@ class FirebaseService:
         
         try:
             ref = self._db.reference('quiz_codes')
-            quiz_id = ref.child(quiz_code).get().val()
-            return quiz_id
+            result = ref.child(quiz_code).get()
+            
+            # Firebase returns snapshot or direct value depending on location
+            if result is not None:
+                quiz_id = result if isinstance(result, str) else str(result)
+                print(f"Found quiz ID '{quiz_id}' for code '{quiz_code}'")
+                return quiz_id
+            else:
+                print(f"No quiz found for code '{quiz_code}'")
+                return None
         except Exception as e:
             print(f"Error getting quiz by code: {e}")
             return None

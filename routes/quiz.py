@@ -365,15 +365,18 @@ def find_quiz():
         
         # Validate code format (16 alphanumeric characters)
         if len(quiz_code) != 16 or not all(c in '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ' for c in quiz_code):
-            flash('Invalid code format. Code must be 16 alphanumeric characters.', 'danger')
+            flash(f'Invalid code format. Code must be exactly 16 alphanumeric characters. You entered: {len(quiz_code)} characters.', 'danger')
             return render_template('quiz/find.html')
         
         # Look up quiz by code
+        print(f"[Quiz Search] Looking up code: {quiz_code}")
         quiz_id = firebase_service.get_quiz_by_code(quiz_code)
         
         if not quiz_id:
-            flash('Quiz code not found. Please check and try again.', 'danger')
+            flash(f'Quiz code "{quiz_code}" not found. Please check and try again. Make sure you have the correct 16-character code from your instructor.', 'danger')
             return render_template('quiz/find.html')
+        
+        print(f"[Quiz Search] Found quiz ID: {quiz_id}")
         
         # Check if user is logged in
         if 'user_id' not in session:
@@ -381,6 +384,7 @@ def find_quiz():
             flash('Please login to access this quiz.', 'info')
             return redirect(url_for('auth.login'))
         
+        flash(f'Quiz found! Starting quiz...', 'success')
         # Redirect to quiz start
         return redirect(url_for('quiz.start_quiz', quiz_id=quiz_id))
     
