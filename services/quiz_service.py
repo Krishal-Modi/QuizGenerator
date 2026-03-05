@@ -199,35 +199,64 @@ class QuizService:
             )
         else:
             is_correct = user_answer.strip().lower() == correct_answer.strip().lower()
-        
+
+        # Resolve letter-based correct_answer to full option text for display
+        display_correct = correct_answer
+        options = question.get('options', [])
+        if correct_answer.strip().upper() in ('A', 'B', 'C', 'D') and options:
+            letter_index = ord(correct_answer.strip().upper()) - ord('A')
+            if 0 <= letter_index < len(options):
+                display_correct = options[letter_index]
+
         return {
             'question_id': question_id,
             'question_text': question.get('text', question.get('question', 'Question not available')),
             'question_type': q_type,
             'is_correct': is_correct,
             'user_answer': user_answer,
-            'correct_answer': correct_answer,
+            'correct_answer': display_correct,
             'concept': question.get('concept', 'General'),
             'explanation': question.get('explanation', 'No explanation available for this question.'),
             'marks_obtained': int(1 if is_correct else 0),  # 1 mark per question
             'marks_total': int(1),
-            'options': question.get('options', [])
+            'options': options
         }
     
     def _evaluate_mcq(self, user_answer: str, correct_answer: str) -> bool:
-        """Evaluate MCQ answer with robust string comparison"""
-        user_clean = user_answer.strip().lower()
-        correct_clean = correct_answer.strip().lower()
-        
-        # Direct comparison
-        if user_clean == correct_clean:
+        """Evaluate MCQ answer with robust comparison.
+
+        Handles both letter-based answers (A/B/C/D) and full-text answers.
+        The user_answer from the form may be "A. Paris" while correct_answer
+        may be just "A" (new format) or the full text (legacy format).
+        """
+        user_clean = user_answer.strip()
+        correct_clean = correct_answer.strip()
+
+        # Direct match (case-insensitive)
+        if user_clean.lower() == correct_clean.lower():
             return True
-        
-        # Try stripping punctuation for edge cases
-        import re
-        user_alpha = re.sub(r'[^a-z0-9\\s]', '', user_clean).strip()
-        correct_alpha = re.sub(r'[^a-z0-9\\s]', '', correct_clean).strip()
-        
+
+        # Extract leading letter from user answer (e.g. "A. Paris" -> "A")
+        letter_match = re.match(r'^([A-Da-d])\.\s', user_clean)
+        user_letter = letter_match.group(1).upper() if letter_match else None
+
+        # If correct_answer is a single letter (new format), compare letters
+        if correct_clean.upper() in ('A', 'B', 'C', 'D'):
+            if user_letter and user_letter == correct_clean.upper():
+                return True
+            # User may have submitted just the letter
+            if user_clean.upper() in ('A', 'B', 'C', 'D'):
+                return user_clean.upper() == correct_clean.upper()
+
+        # If correct_answer also has a letter prefix, compare both letters
+        correct_letter_match = re.match(r'^([A-Da-d])\.\s', correct_clean)
+        if correct_letter_match and user_letter:
+            return user_letter == correct_letter_match.group(1).upper()
+
+        # Fallback: strip punctuation and compare full text
+        user_alpha = re.sub(r'[^a-z0-9\s]', '', user_clean.lower()).strip()
+        correct_alpha = re.sub(r'[^a-z0-9\s]', '', correct_clean.lower()).strip()
+
         return user_alpha == correct_alpha
     
     def _evaluate_true_false(self, user_answer: str, correct_answer: str) -> bool:

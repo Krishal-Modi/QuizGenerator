@@ -128,13 +128,15 @@
                                 
                                 <div class="options-container" style="{{ 'display:none;' if question.type != 'mcq' else '' }}">
                                     <label class="form-label">Options (mark the correct answer)</label>
+                                    {% set labels = ['A', 'B', 'C', 'D'] %}
                                     {% for option in question.options %}
+                                    {% set opt_letter = labels[loop.index0] if loop.index0 < 4 else '' %}
                                     <div class="input-group mb-2">
                                         <div class="input-group-text">
                                             <input class="form-check-input mt-0" type="radio" 
-                                                   name="questions[{{ loop.index0 }}][correct_option]" 
+                                                   name="questions[{{ loop.parent.loop.index0 }}][correct_option]" 
                                                    value="{{ loop.index0 }}"
-                                                   {{ 'checked' if option == question.correct_answer else '' }}>
+                                                   {{ 'checked' if (option == question.correct_answer or opt_letter == question.correct_answer) else '' }}>
                                         </div>
                                         <input type="text" class="form-control" 
                                                name="questions[{{ loop.parent.loop.index0 }}][options][]" 

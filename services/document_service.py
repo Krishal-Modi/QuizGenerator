@@ -185,19 +185,39 @@ class DocumentService:
                             "Install with: pip install python-docx")
     
     def _clean_pdf_text(self, text: str) -> str:
-        """Clean common PDF extraction artifacts"""
+        """Clean common PDF extraction artifacts with enhanced processing"""
         # Remove page numbers (standalone numbers)
         text = re.sub(r'^\d+\s*$', '', text, flags=re.MULTILINE)
+        
+        # Remove header/footer patterns
+        text = re.sub(r'^Page \d+ of \d+\s*$', '', text, flags=re.MULTILINE)
+        text = re.sub(r'^\[\d+\]\s*$', '', text, flags=re.MULTILINE)
+        
+        # Fix hyphenated words split across lines
+        text = re.sub(r'(\w+)-\s*\n\s*(\w+)', r'\1\2', text)
+        
+        # Remove bullet point artifacts
+        text = re.sub(r'^[•·○●▪▫]\s*', '• ', text, flags=re.MULTILINE)
+        
+        # Fix common OCR/PDF errors
+        text = re.sub(r'\s+([.,;:!?])', r'\1', text)  # Remove space before punctuation
+        text = re.sub(r'([.,;:!?])([A-Za-z])', r'\1 \2', text)  # Add space after punctuation
         
         # Remove excessive whitespace
         text = re.sub(r'\n{3,}', '\n\n', text)
         text = re.sub(r' {2,}', ' ', text)
+        text = re.sub(r'\t+', ' ', text)
         
-        # Remove header/footer patterns (customize based on your documents)
-        text = re.sub(r'^Page \d+ of \d+\s*$', '', text, flags=re.MULTILINE)
+        # Remove non-printable characters except newlines and tabs
+        text = ''.join(char for char in text if char.isprintable() or char in '\n\t')
         
-        # Fix hyphenated words split across lines
-        text = re.sub(r'(\w+)-\n(\w+)', r'\1\2', text)
+        # Fix common encoding issues
+        replacements = {
+            'â€™': "'", 'â€œ': '"', 'â€': '"', 'â€"': '-', 'â€"': '--',
+            'Â': '', 'Ã©': 'é', 'Ã¨': 'è', 'Ã ': 'à'
+        }
+        for old, new in replacements.items():
+            text = text.replace(old, new)
         
         return text.strip()
     

@@ -42,31 +42,14 @@
                         </div>
                     </div>
                     
-                    <!-- Question Types -->
+                    <!-- Question Type (MCQ Only) -->
                     <div class="mb-4">
-                        <label class="form-label">Question Types</label>
-                        <div class="d-flex gap-3 flex-wrap">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" name="question_types" 
-                                       value="mcq" id="type_mcq" checked>
-                                <label class="form-check-label" for="type_mcq">
-                                    <i class="bi bi-list-ol"></i> Multiple Choice
-                                </label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" name="question_types" 
-                                       value="true_false" id="type_tf" checked>
-                                <label class="form-check-label" for="type_tf">
-                                    <i class="bi bi-toggle-on"></i> True/False
-                                </label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" name="question_types" 
-                                       value="short_answer" id="type_sa">
-                                <label class="form-check-label" for="type_sa">
-                                    <i class="bi bi-pencil"></i> Short Answer
-                                </label>
-                            </div>
+                        <label class="form-label">Question Type</label>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-primary fs-6 px-3 py-2">
+                                <i class="bi bi-list-ol"></i> Multiple Choice (4 options)
+                            </span>
+                            <small class="text-muted">AI-generated MCQs with Bloom's Taxonomy alignment</small>
                         </div>
                     </div>
                     
@@ -166,7 +149,8 @@
                 <h6><i class="bi bi-lightbulb text-warning"></i> Tips</h6>
                 <ul class="small text-muted mb-0">
                     <li>Start with 10-15 questions for a 15-minute quiz</li>
-                    <li>Mix question types for variety</li>
+                    <li>Each MCQ has exactly 4 options (A-D)</li>
+                    <li>Difficulty uses Bloom's Taxonomy levels</li>
                     <li>Enable adaptive mode for personalized learning</li>
                     <li>Use password protection for graded assessments</li>
                 </ul>
@@ -195,15 +179,6 @@ function togglePasswordField() {
 
 // Form validation and submit
 document.getElementById('generateForm').addEventListener('submit', function(e) {
-    // Check if at least one question type is selected
-    const checkboxes = document.querySelectorAll('input[name="question_types"]:checked');
-    
-    if (checkboxes.length === 0) {
-        e.preventDefault();
-        alert('Please select at least one question type.');
-        return false;
-    }
-    
     // Show loading state on form submit
     const btn = document.getElementById('generateBtn');
     btn.disabled = true;

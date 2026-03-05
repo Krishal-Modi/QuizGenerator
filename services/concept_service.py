@@ -67,6 +67,7 @@ class ConceptService:
     def extract_concepts(self, text: str, max_concepts: int = 50) -> List[Dict]:
         """
         Extract key concepts from text using multiple methods with aggressive fallbacks.
+        Optimized for speed.
         
         Args:
             text: Input document text
@@ -81,27 +82,16 @@ class ConceptService:
         concepts = []
         seen_concepts = set()
         
+        # Limit text size for faster processing (use first 10000 chars + last 2000)
+        if len(text) > 12000:
+            text = text[:10000] + "\n...\n" + text[-2000:]
+            print(f"[Concept Extraction] Text truncated to 12000 chars for faster processing")
+        
         print(f"[Concept Extraction] Starting extraction from {len(text)} chars of text")
         
-        # Method 1: KeyBERT extraction (semantic keyphrases)
+        # Method 1: TF-IDF extraction (FAST - run first)
         try:
-            keybert_concepts = self._extract_keybert(text, top_n=max_concepts // 2)
-            print(f"[Concept Extraction] KeyBERT found: {len(keybert_concepts)} concepts")
-            for concept, score in keybert_concepts:
-                if concept.lower() not in seen_concepts:
-                    concepts.append({
-                        'name': concept,
-                        'score': score,
-                        'type': 'keyphrase',
-                        'source': 'keybert'
-                    })
-                    seen_concepts.add(concept.lower())
-        except Exception as e:
-            print(f"[Concept Extraction] KeyBERT failed: {e}")
-        
-        # Method 2: TF-IDF extraction
-        try:
-            tfidf_concepts = self._extract_tfidf(text, top_n=max_concepts // 3)
+            tfidf_concepts = self._extract_tfidf(text, top_n=max_concepts // 2)
             print(f"[Concept Extraction] TF-IDF found: {len(tfidf_concepts)} concepts")
             for concept, score in tfidf_concepts:
                 if concept.lower() not in seen_concepts:
@@ -115,25 +105,9 @@ class ConceptService:
         except Exception as e:
             print(f"[Concept Extraction] TF-IDF failed: {e}")
         
-        # Method 3: Named Entity Recognition
+        # Method 2: RAKE extraction (FAST)
         try:
-            ner_concepts = self._extract_ner(text)
-            print(f"[Concept Extraction] NER found: {len(ner_concepts)} concepts")
-            for concept, entity_type in ner_concepts:
-                if concept.lower() not in seen_concepts:
-                    concepts.append({
-                        'name': concept,
-                        'score': 0.7,
-                        'type': entity_type,
-                        'source': 'ner'
-                    })
-                    seen_concepts.add(concept.lower())
-        except Exception as e:
-            print(f"[Concept Extraction] NER failed: {e}")
-        
-        # Method 4: RAKE extraction
-        try:
-            rake_concepts = self._extract_rake(text, top_n=max_concepts // 4)
+            rake_concepts = self._extract_rake(text, top_n=max_concepts // 3)
             print(f"[Concept Extraction] RAKE found: {len(rake_concepts)} concepts")
             for concept, score in rake_concepts:
                 if concept.lower() not in seen_concepts:
@@ -146,6 +120,43 @@ class ConceptService:
                     seen_concepts.add(concept.lower())
         except Exception as e:
             print(f"[Concept Extraction] RAKE failed: {e}")
+        
+        # Skip expensive methods if we already have enough good concepts
+        if len(concepts) >= max_concepts * 0.7:
+            print(f"[Concept Extraction] Skipping expensive methods, have {len(concepts)} concepts")
+        else:
+            # Method 3: KeyBERT extraction (SLOWER - only if needed)
+            try:
+                keybert_concepts = self._extract_keybert(text, top_n=max_concepts // 3)
+                print(f"[Concept Extraction] KeyBERT found: {len(keybert_concepts)} concepts")
+                for concept, score in keybert_concepts:
+                    if concept.lower() not in seen_concepts:
+                        concepts.append({
+                            'name': concept,
+                            'score': score,
+                            'type': 'keyphrase',
+                            'source': 'keybert'
+                        })
+                        seen_concepts.add(concept.lower())
+            except Exception as e:
+                print(f"[Concept Extraction] KeyBERT failed: {e}")
+            
+            # Method 4: Named Entity Recognition (SLOWER - only if needed)
+            if len(concepts) < max_concepts * 0.8:
+                try:
+                    ner_concepts = self._extract_ner(text)
+                    print(f"[Concept Extraction] NER found: {len(ner_concepts)} concepts")
+                    for concept, entity_type in ner_concepts:
+                        if concept.lower() not in seen_concepts:
+                            concepts.append({
+                                'name': concept,
+                                'score': 0.7,
+                                'type': entity_type,
+                                'source': 'ner'
+                            })
+                            seen_concepts.add(concept.lower())
+                except Exception as e:
+                    print(f"[Concept Extraction] NER failed: {e}")
         
         # Sort by score and limit
         concepts.sort(key=lambda x: x['score'], reverse=True)
@@ -206,9 +217,13 @@ class ConceptService:
         
         print(f"[Concept Extraction] Final: {len(concepts)} concepts")
 
-        # Add context for each concept
+        # Add context for each concept (lightweight - only find first occurrence)
         for concept in concepts:
-            concept['context'] = self._get_concept_context(text, concept['name'])
+            try:
+                concept['context'] = self._get_concept_context(text, concept['name'], context_chars=150)
+            except Exception as e:
+                concept['context'] = ""
+                print(f"[Concept Extraction] Context extraction failed for {concept['name']}: {e}")
         
         return concepts
 
@@ -241,19 +256,23 @@ class ConceptService:
         return scored[:top_n]
     
     def _extract_keybert(self, text: str, top_n: int = 20) -> List[Tuple[str, float]]:
-        """Extract keyphrases using KeyBERT"""
+        """Extract keyphrases using KeyBERT - optimized for speed"""
         self._load_keybert()
         
         if self._keybert is None:
             return []
         
         try:
+            # Limit text for KeyBERT (it's slow on long texts)
+            if len(text) > 5000:
+                text = text[:5000]
+            
             keywords = self._keybert.extract_keywords(
                 text,
-                keyphrase_ngram_range=(1, 3),
+                keyphrase_ngram_range=(1, 2),  # Reduced from (1,3) for speed
                 stop_words='english',
                 use_mmr=True,  # Maximal Marginal Relevance for diversity
-                diversity=0.5,
+                diversity=0.3,  # Reduced from 0.5 for speed
                 top_n=top_n
             )
             return keywords

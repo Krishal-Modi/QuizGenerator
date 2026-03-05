@@ -124,9 +124,10 @@
                                 <p><strong>Options:</strong></p>
                                 <ul class="list-group list-group-flush mb-3">
                                     {% for option in question.options %}
-                                    <li class="list-group-item {{ 'list-group-item-success' if option == question.correct_answer else '' }}">
+                                    {% set opt_letter = option[:1] if option and option|length > 1 and option[1:2] == '.' else '' %}
+                                    <li class="list-group-item {{ 'list-group-item-success' if (option == question.correct_answer or opt_letter == question.correct_answer) else '' }}">
                                         {{ option }}
-                                        {% if option == question.correct_answer %}
+                                        {% if option == question.correct_answer or opt_letter == question.correct_answer %}
                                         <i class="bi bi-check-circle-fill text-success float-end"></i>
                                         {% endif %}
                                     </li>
@@ -278,7 +279,7 @@ function copyQuizCode() {
 }
 
 // Question type chart
-const typeData = {{ question_type_counts | tojson | default('{"mcq":0,"tf":0,"short":0}') }};
+const typeData = {{ question_type_counts | tojson }};
 
 new Chart(document.getElementById('questionTypeChart'), {
     type: 'doughnut',

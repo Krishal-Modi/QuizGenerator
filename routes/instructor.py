@@ -144,7 +144,7 @@ def generate_quiz(doc_id):
         # Get quiz settings
         quiz_name = request.form.get('quiz_name')
         num_questions = int(request.form.get('num_questions', 10))
-        question_types = request.form.getlist('question_types')
+        question_types = ['mcq']  # MCQ-only engine
         difficulty = request.form.get('difficulty', 'mixed')
         is_adaptive = request.form.get('is_adaptive') == 'on'
         is_password_protected = request.form.get('is_password_protected') == 'on'
@@ -153,10 +153,6 @@ def generate_quiz(doc_id):
         # Validate quiz settings
         if not quiz_name:
             flash('Quiz name is required.', 'danger')
-            return render_template('instructor/generate_quiz.html', document=document)
-        
-        if not question_types or len(question_types) == 0:
-            flash('Please select at least one question type.', 'danger')
             return render_template('instructor/generate_quiz.html', document=document)
         
         if num_questions < 1:
@@ -220,10 +216,27 @@ def view_quiz(quiz_id):
     # Get quiz statistics
     stats = firebase_service.get_quiz_statistics(quiz_id)
     
+    # Calculate question type counts
+    question_type_counts = {
+        'mcq': 0,
+        'tf': 0,
+        'short': 0
+    }
+    
+    for q in questions:
+        q_type = q.get('type', 'mcq')
+        if q_type == 'mcq':
+            question_type_counts['mcq'] += 1
+        elif q_type == 'true_false':
+            question_type_counts['tf'] += 1
+        elif q_type == 'short_answer':
+            question_type_counts['short'] += 1
+    
     return render_template('instructor/view_quiz.html', 
                          quiz=quiz, 
                          questions=questions,
-                         stats=stats)
+                         stats=stats,
+                         question_type_counts=question_type_counts)
 
 
 @instructor_bp.route('/quiz/<quiz_id>/edit', methods=['GET', 'POST'])
