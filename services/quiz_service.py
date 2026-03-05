@@ -200,24 +200,34 @@ class QuizService:
         else:
             is_correct = user_answer.strip().lower() == correct_answer.strip().lower()
 
-        # Resolve letter-based correct_answer to full option text for display
+        # Resolve letter-based correct_answer to readable display text
         display_correct = correct_answer
+        display_user = user_answer
         options = question.get('options', [])
+
         if correct_answer.strip().upper() in ('A', 'B', 'C', 'D') and options:
             letter_index = ord(correct_answer.strip().upper()) - ord('A')
             if 0 <= letter_index < len(options):
-                display_correct = options[letter_index]
+                opt_text = re.sub(r'^[A-Da-d][.):\s]+\s*', '', str(options[letter_index]))
+                display_correct = f"{correct_answer.strip().upper()}. {opt_text}"
+
+        # Also resolve user's answer letter to readable text
+        if user_answer.strip().upper() in ('A', 'B', 'C', 'D') and options:
+            u_idx = ord(user_answer.strip().upper()) - ord('A')
+            if 0 <= u_idx < len(options):
+                u_text = re.sub(r'^[A-Da-d][.):\s]+\s*', '', str(options[u_idx]))
+                display_user = f"{user_answer.strip().upper()}. {u_text}"
 
         return {
             'question_id': question_id,
             'question_text': question.get('text', question.get('question', 'Question not available')),
             'question_type': q_type,
             'is_correct': is_correct,
-            'user_answer': user_answer,
+            'user_answer': display_user,
             'correct_answer': display_correct,
             'concept': question.get('concept', 'General'),
             'explanation': question.get('explanation', 'No explanation available for this question.'),
-            'marks_obtained': int(1 if is_correct else 0),  # 1 mark per question
+            'marks_obtained': int(1 if is_correct else 0),
             'marks_total': int(1),
             'options': options
         }

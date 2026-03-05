@@ -220,10 +220,10 @@ function renderGraph(nodes, edges) {
 }
 
 function getNodeColor(mastery) {
-    if (mastery === undefined || mastery === null) return '#6c757d';
-    if (mastery >= 70) return '#198754';
-    if (mastery >= 40) return '#ffc107';
-    return '#dc3545';
+    if (mastery === undefined || mastery === null) return '#64748b';
+    if (mastery >= 70) return '#10b981';
+    if (mastery >= 40) return '#f59e0b';
+    return '#ef4444';
 }
 
 function updateStats(stats) {
@@ -252,7 +252,7 @@ function showConceptDetails(nodeId) {
         <div class="mb-2">
             <strong>Mastery:</strong>
             <div class="progress" style="height: 8px;">
-                <div class="progress-bar bg-${node.color === '#198754' ? 'success' : node.color === '#ffc107' ? 'warning' : 'danger'}" 
+                <div class="progress-bar bg-${node.color === '#10b981' ? 'success' : node.color === '#f59e0b' ? 'warning' : 'danger'}" 
                      style="width: ${node.mastery || 0}%"></div>
             </div>
             <small class="text-muted">${node.mastery || 0}%</small>

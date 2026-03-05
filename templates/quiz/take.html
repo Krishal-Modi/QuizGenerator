@@ -5,36 +5,42 @@
 {% block extra_css %}
 <style>
     .question-container {
-        animation: fadeIn 0.5s ease;
+        animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     }
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(10px); }
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(16px); }
         to { opacity: 1; transform: translateY(0); }
     }
     .option-btn {
         text-align: left;
-        padding: 12px 16px;
+        padding: 14px 18px;
         margin-bottom: 10px;
-        border: 2px solid #dee2e6;
-        transition: all 0.2s ease;
+        border: 2px solid var(--gray-200, #e2e8f0);
+        border-radius: 0.75rem !important;
+        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        background: #fff;
     }
     .option-btn:hover {
-        border-color: #0d6efd;
-        background-color: #f8f9fa;
+        border-color: var(--primary-light, #5eead4);
+        background: var(--primary-subtle, #f0fdfa);
+        transform: translateX(4px);
     }
     .option-btn.selected {
-        border-color: #0d6efd;
-        background-color: #e7f1ff;
-        border-width: 2px;
+        border-color: var(--primary, #14b8a6);
+        background: var(--primary-subtle, #f0fdfa);
+        box-shadow: 0 0 0 3px rgba(20,184,166,0.12);
     }
     .quiz-timer {
-        font-size: 2rem;
-        font-weight: bold;
-        color: #0d6efd;
+        font-family: var(--font-mono, 'JetBrains Mono', monospace);
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: var(--primary, #14b8a6);
+        letter-spacing: 0.04em;
     }
     .progress-indicator {
         height: 6px;
-        background: #e9ecef;
+        background: var(--gray-200, #e2e8f0);
+        border-radius: 999px;
     }
 </style>
 {% endblock %}
@@ -176,11 +182,12 @@
         // MCQ Options — use index-based selection for robustness
         if (qType === 'mcq' && options.length > 0) {
             html += `<div class="options-container" id="options_${q.id}">`;
+            const optionLabels = ['A', 'B', 'C', 'D', 'E', 'F'];
             options.forEach((option, i) => {
-                const optionStr = String(option);
-                const isSelected = userAnswers[q.id] === optionStr;
-                const optionLabels = ['A', 'B', 'C', 'D', 'E', 'F'];
+                // Strip any existing letter prefix (e.g. "A. Paris" → "Paris") for clean display
+                let displayText = String(option).replace(/^[A-Da-d][.):\s]+\s*/, '');
                 const label = optionLabels[i] || String(i + 1);
+                const isSelected = userAnswers[q.id] === label;
                 html += `<button type="button" 
                     class="btn btn-outline-secondary option-btn w-100 ${isSelected ? 'selected' : ''}"
                     onclick="selectMcqOption('${q.id}', ${i})"
@@ -188,7 +195,7 @@
                     <div class="d-flex align-items-center">
                         <span class="badge bg-${isSelected ? 'primary' : 'secondary'} me-3">${label}</span>
                         <i class="bi ${isSelected ? 'bi-check-circle-fill text-primary' : 'bi-circle'} me-2"></i>
-                        <span>${escapeHtml(optionStr)}</span>
+                        <span>${escapeHtml(displayText)}</span>
                     </div>
                 </button>`;
             });
@@ -249,7 +256,9 @@
         const q = questions.find(q => q.id === questionId);
         if (!q || !Array.isArray(q.options) || optionIndex >= q.options.length) return;
         
-        const value = String(q.options[optionIndex]);
+        // Store the letter (A/B/C/D) as the answer — matches correct_answer format
+        const optionLabels = ['A', 'B', 'C', 'D'];
+        const value = optionLabels[optionIndex] || String(optionIndex);
         
         // Update UI
         const container = document.getElementById('options_' + questionId);

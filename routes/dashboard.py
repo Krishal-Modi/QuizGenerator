@@ -239,11 +239,125 @@ def knowledge_graph():
 @dashboard_bp.route('/profile', methods=['GET', 'POST'])
 @login_required
 def profile():
-    """User profile settings"""
+    """User profile with embedded progress view"""
     user_id = session.get('user_id')
     user_data = firebase_service.get_user_data(user_id)
-    
-    return render_template('dashboard/profile.html', user=user_data)
+
+    # --- Compute the same progress data as the progress() route ---
+    concept_mastery = user_data.get('concept_mastery', {})
+    quiz_history_raw = user_data.get('quiz_history', {})
+
+    if isinstance(quiz_history_raw, dict):
+        quiz_history = [v for v in quiz_history_raw.values() if isinstance(v, dict)]
+    elif isinstance(quiz_history_raw, list):
+        quiz_history = [q for q in quiz_history_raw if isinstance(q, dict)]
+    else:
+        quiz_history = []
+
+    # Sort by timestamp
+    quiz_history_sorted = sorted(
+        quiz_history,
+        key=lambda x: x.get('timestamp', '') if isinstance(x, dict) else '',
+        reverse=False,
+    ) if quiz_history else []
+
+    # Time calculation
+    total_time_seconds = sum(
+        q.get('time_taken', 0) for q in quiz_history if isinstance(q, dict)
+    )
+    total_time_hours = total_time_seconds // 3600
+    total_time_minutes = (total_time_seconds % 3600) // 60
+    if total_time_hours > 0:
+        total_time_display = f"{total_time_hours}h {total_time_minutes}m"
+    elif total_time_minutes > 0:
+        total_time_display = f"{total_time_minutes}m"
+    else:
+        total_time_display = "0m"
+
+    # Best score
+    all_scores = []
+    for q in quiz_history:
+        if isinstance(q, dict):
+            try:
+                s = float(q.get('score_percentage', q.get('score', 0)) or 0)
+                all_scores.append(s)
+            except (ValueError, TypeError):
+                pass
+    best_score = max(all_scores) if all_scores else 0
+
+    stats = {
+        'total_quizzes': len(quiz_history),
+        'avg_score': calculate_average_score(quiz_history),
+        'concepts_mastered': count_mastered_concepts(concept_mastery),
+        'total_time': total_time_display,
+        'best_score': round(best_score, 1),
+        'total_correct': sum(q.get('correct', 0) for q in quiz_history if isinstance(q, dict)),
+        'total_questions_attempted': sum(q.get('total_questions', 0) for q in quiz_history if isinstance(q, dict)),
+    }
+
+    # Concept performance / mastery chart data
+    try:
+        concept_performance = calculate_concept_performance(quiz_history, concept_mastery)
+    except Exception:
+        concept_performance = {}
+
+    mastery_labels, mastery_data, mastery_trend, mastery_predicted = [], [], [], []
+    if concept_mastery:
+        mastery_labels = [str(c)[:40] for c in list(concept_mastery.keys())[:10]]
+        for c in list(concept_mastery.keys())[:10]:
+            val = concept_mastery.get(c, 0)
+            try:
+                val = float(val) * 100
+                val = min(max(val, 0), 100)
+            except (ValueError, TypeError):
+                val = 0
+            mastery_data.append(round(val, 1))
+            perf = concept_performance.get(c, {})
+            mastery_trend.append(perf.get('trend', 0))
+            mastery_predicted.append(perf.get('predicted', val))
+
+    # Performance over time
+    performance_labels, performance_data = [], []
+    for i, q in enumerate(quiz_history_sorted):
+        quiz_name = str(q.get('quiz_name', f'Quiz {i+1}'))
+        timestamp = str(q.get('timestamp', ''))
+        if len(quiz_name) > 20:
+            quiz_name = quiz_name[:17] + '...'
+        if timestamp and len(timestamp) >= 10:
+            date_str = timestamp[:10]
+            try:
+                parts = date_str.split('-')
+                label = f"{quiz_name} ({parts[1]}/{parts[2]})" if len(parts) == 3 else quiz_name
+            except Exception:
+                label = quiz_name
+        else:
+            label = quiz_name
+        performance_labels.append(label)
+        try:
+            score = float(q.get('score_percentage', q.get('score', 0)) or 0)
+        except (ValueError, TypeError):
+            score = 0
+        performance_data.append(round(score, 1))
+
+    # Top / weak concepts
+    top_concepts = sorted(
+        [{'name': c, 'mastery': int(m * 100)} for c, m in concept_mastery.items()],
+        key=lambda x: x['mastery'], reverse=True,
+    )[:5]
+    weak_concepts = get_weak_concepts(concept_mastery)
+
+    return render_template('dashboard/profile.html',
+                         user=user_data,
+                         stats=stats,
+                         quiz_history=quiz_history,
+                         mastery_labels=mastery_labels,
+                         mastery_data=mastery_data,
+                         mastery_trend=mastery_trend,
+                         mastery_predicted=mastery_predicted,
+                         performance_labels=performance_labels,
+                         performance_data=performance_data,
+                         top_concepts=top_concepts,
+                         weak_concepts=weak_concepts)
 
 
 # Helper functions

@@ -36,6 +36,10 @@ BLOOMS_LEVELS = {
             "Which of the following is true about {concept}?",
             "How is {concept} defined in the context of the material?",
             "What is {concept}?",
+            "What is the primary purpose of {concept}?",
+            "Which of the following accurately describes the role of {concept}?",
+            "What key characteristic distinguishes {concept}?",
+            "In the given material, {concept} is used to:",
         ],
     },
     "medium": {
@@ -53,6 +57,10 @@ BLOOMS_LEVELS = {
             "What is the cause-and-effect relationship involving {concept}?",
             "Which scenario demonstrates the use of {concept}?",
             "Compare and contrast {concept} with {related}. Which statement is correct?",
+            "Why is {concept} necessary when working with {related}?",
+            "What problem does {concept} solve that {related} does not?",
+            "If {concept} were removed from the process, what would change?",
+            "Which of the following is a consequence of applying {concept}?",
         ],
     },
     "hard": {
@@ -70,6 +78,10 @@ BLOOMS_LEVELS = {
             "Predict what would happen if {concept} were removed from {scenario}.",
             "Critically assess: Why is {concept} considered important in {related}?",
             "Which argument best justifies the use of {concept} over {related}?",
+            "In a situation where {scenario}, which limitation of {concept} would be most significant?",
+            "A team decides to replace {concept} with {related}. What trade-off should they expect?",
+            "Which evidence from the material best supports the importance of {concept} in {scenario}?",
+            "Evaluate: Under what conditions would {concept} fail to produce the desired outcome?",
         ],
     },
 }
@@ -125,6 +137,16 @@ class DifficultyController:
         """Return Bloom's action verbs for the given difficulty."""
         difficulty = difficulty.lower()
         return BLOOMS_LEVELS.get(difficulty, BLOOMS_LEVELS["medium"])["verbs"]
+
+    @staticmethod
+    def get_bloom_info(difficulty: str) -> Dict:
+        """Return Bloom's taxonomy label and verbs for the given difficulty."""
+        difficulty = difficulty.lower()
+        level = BLOOMS_LEVELS.get(difficulty, BLOOMS_LEVELS["medium"])
+        return {
+            "taxonomy": " / ".join(level["taxonomy"]),
+            "verbs": level["verbs"],
+        }
 
     @staticmethod
     def get_model_prompt(

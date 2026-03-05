@@ -1,178 +1,349 @@
 {% extends "base.html" %}
 
-{% block title %}Profile - Adaptive Quiz Generator{% endblock %}
+{% block title %}{{ user.name | default('Profile') }} - Adaptive Quiz Generator{% endblock %}
 
 {% block content %}
-<div class="row mb-4">
-    <div class="col">
-        <h2><i class="bi bi-person-circle text-primary"></i> My Profile</h2>
-        <p class="text-muted">Manage your account settings and preferences</p>
+<!-- ═══════ PROFILE HEADER ═══════ -->
+<div class="card mb-4 shadow-sm border-0" style="background: linear-gradient(135deg, #0f766e 0%, #14b8a6 100%);">
+    <div class="card-body py-4">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                <div class="bg-white rounded-circle d-inline-flex align-items-center justify-content-center shadow"
+                     style="width: 80px; height: 80px; font-size: 2.2rem; font-weight: 700; color: #14b8a6;">
+                    {{ user.name[0] | upper if user.name else 'U' }}
+                </div>
+            </div>
+            <div class="col">
+                <h2 class="text-white mb-1 fw-bold">{{ user.name | default('User') }}</h2>
+                <p class="text-white-50 mb-1"><i class="bi bi-envelope"></i> {{ user.email }}</p>
+                <span class="badge bg-{{ 'warning' if user.role == 'instructor' else 'light text-dark' }} me-2">
+                    <i class="bi bi-{{ 'mortarboard' if user.role == 'instructor' else 'person' }}"></i>
+                    {{ user.role | title | default('Student') }}
+                </span>
+                <span class="badge bg-white bg-opacity-25 text-white">
+                    <i class="bi bi-calendar3"></i> Member since {{ user.created_at | default('N/A') }}
+                </span>
+            </div>
+            <div class="col-auto">
+                <button class="btn btn-light btn-sm" data-bs-toggle="collapse" data-bs-target="#settingsSection">
+                    <i class="bi bi-gear"></i> Settings
+                </button>
+            </div>
+        </div>
     </div>
 </div>
 
-<div class="row">
-    <div class="col-md-4">
-        <!-- Profile Card -->
-        <div class="card mb-4">
-            <div class="card-body text-center">
-                <div class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" 
-                     style="width: 80px; height: 80px; font-size: 2rem;">
-                    {{ user.name[0] | upper if user.name else 'U' }}
-                </div>
-                <h4>{{ user.name | default('User') }}</h4>
-                <p class="text-muted mb-2">{{ user.email }}</p>
-                <span class="badge bg-{{ 'warning' if user.role == 'instructor' else 'info' }}">
-                    {{ user.role | title | default('Student') }}
-                </span>
-                <hr>
-                <div class="text-start">
-                    <p class="mb-1"><strong>Member since:</strong></p>
-                    <p class="text-muted">{{ user.created_at | default('N/A') }}</p>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Quick Stats -->
-        <div class="card">
-            <div class="card-header bg-white">
-                <h6 class="mb-0"><i class="bi bi-bar-chart"></i> Quick Stats</h6>
-            </div>
-            <div class="card-body">
-                <ul class="list-unstyled mb-0">
-                    <li class="d-flex justify-content-between mb-2">
-                        <span>Quizzes Taken</span>
-                        <strong>{{ stats.quizzes_taken | default(0) }}</strong>
-                    </li>
-                    <li class="d-flex justify-content-between mb-2">
-                        <span>Avg. Score</span>
-                        <strong>{{ stats.avg_score | default(0) }}%</strong>
-                    </li>
-                    <li class="d-flex justify-content-between mb-2">
-                        <span>Concepts Mastered</span>
-                        <strong>{{ stats.concepts_mastered | default(0) }}</strong>
-                    </li>
-                    <li class="d-flex justify-content-between">
-                        <span>Study Streak</span>
-                        <strong>{{ stats.streak | default(0) }} days</strong>
-                    </li>
-                </ul>
+<!-- ═══════ QUICK STATS CARDS ═══════ -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="card text-center shadow-sm border-0 h-100">
+            <div class="card-body py-3">
+                <div class="fs-2 fw-bold text-primary">{{ stats.total_quizzes }}</div>
+                <small class="text-muted"><i class="bi bi-journal-check"></i> Quizzes Taken</small>
             </div>
         </div>
     </div>
-    
+    <div class="col-6 col-md-3">
+        <div class="card text-center shadow-sm border-0 h-100">
+            <div class="card-body py-3">
+                <div class="fs-2 fw-bold {{ 'text-success' if stats.avg_score >= 70 else 'text-warning' if stats.avg_score >= 50 else 'text-danger' }}">
+                    {{ "%.0f"|format(stats.avg_score) }}%
+                </div>
+                <small class="text-muted"><i class="bi bi-graph-up"></i> Average Score</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card text-center shadow-sm border-0 h-100">
+            <div class="card-body py-3">
+                <div class="fs-2 fw-bold text-info">{{ "%.0f"|format(stats.best_score) }}%</div>
+                <small class="text-muted"><i class="bi bi-trophy"></i> Best Score</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card text-center shadow-sm border-0 h-100">
+            <div class="card-body py-3">
+                <div class="fs-2 fw-bold text-success">{{ stats.concepts_mastered }}</div>
+                <small class="text-muted"><i class="bi bi-lightning"></i> Concepts Mastered</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════ PERFORMANCE CHART ═══════ -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white border-0 pb-0">
+                <h5 class="mb-0"><i class="bi bi-activity text-primary"></i> Performance Over Time</h5>
+                <small class="text-muted">Your quiz score trend</small>
+            </div>
+            <div class="card-body">
+                {% if performance_labels and performance_labels|length > 0 %}
+                <canvas id="performanceChart" height="100"></canvas>
+                {% else %}
+                <div class="text-center py-4 text-muted">
+                    <i class="bi bi-bar-chart" style="font-size: 3rem;"></i>
+                    <p class="mt-2 mb-0">Take quizzes to see your performance graph</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════ CONCEPT MASTERY + TOP/WEAK CONCEPTS ═══════ -->
+<div class="row mb-4">
     <div class="col-md-8">
-        <!-- Update Profile Form -->
-        <div class="card mb-4">
-            <div class="card-header bg-white">
-                <h5 class="mb-0"><i class="bi bi-pencil"></i> Update Profile</h5>
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white border-0 pb-0">
+                <h5 class="mb-0"><i class="bi bi-bar-chart text-primary"></i> Concept Mastery</h5>
+                <small class="text-muted">Your mastery percentage with ML-predicted performance</small>
             </div>
             <div class="card-body">
-                <form id="updateProfileForm">
-                    <div class="mb-3">
-                        <label for="name" class="form-label">Full Name</label>
-                        <input type="text" class="form-control" id="name" name="name" 
-                               value="{{ user.name | default('') }}">
-                    </div>
-                    <div class="mb-3">
-                        <label for="email" class="form-label">Email Address</label>
-                        <input type="email" class="form-control" id="email" name="email" 
-                               value="{{ user.email }}" disabled>
-                        <small class="text-muted">Email cannot be changed</small>
-                    </div>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-check"></i> Save Changes
-                    </button>
-                </form>
+                {% if mastery_labels and mastery_labels|length > 0 %}
+                <canvas id="masteryChart" height="300"></canvas>
+                {% else %}
+                <div class="text-center py-4 text-muted">
+                    <i class="bi bi-clipboard-data" style="font-size: 3rem;"></i>
+                    <p class="mt-2 mb-0">Complete quizzes to track concept mastery</p>
+                </div>
+                {% endif %}
             </div>
         </div>
-        
-        <!-- Change Password -->
-        <div class="card mb-4">
-            <div class="card-header bg-white">
-                <h5 class="mb-0"><i class="bi bi-key"></i> Change Password</h5>
+    </div>
+    <div class="col-md-4">
+        <div class="card shadow-sm border-0 mb-3">
+            <div class="card-header bg-white border-0 pb-0">
+                <h6 class="mb-0"><i class="bi bi-trophy text-success"></i> Top Concepts</h6>
             </div>
-            <div class="card-body">
-                <form id="changePasswordForm">
-                    <div class="mb-3">
-                        <label for="currentPassword" class="form-label">Current Password</label>
-                        <input type="password" class="form-control" id="currentPassword" name="current_password">
-                    </div>
-                    <div class="mb-3">
-                        <label for="newPassword" class="form-label">New Password</label>
-                        <input type="password" class="form-control" id="newPassword" name="new_password">
-                    </div>
-                    <div class="mb-3">
-                        <label for="confirmPassword" class="form-label">Confirm New Password</label>
-                        <input type="password" class="form-control" id="confirmPassword" name="confirm_password">
-                    </div>
-                    <button type="submit" class="btn btn-warning">
-                        <i class="bi bi-key"></i> Change Password
-                    </button>
-                </form>
+            <div class="card-body pt-2">
+                <ul class="list-group list-group-flush">
+                    {% for concept in top_concepts %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center px-0 border-0">
+                        <span class="text-truncate me-2" title="{{ concept.name }}">{{ concept.name }}</span>
+                        <span class="badge bg-success rounded-pill">{{ concept.mastery }}%</span>
+                    </li>
+                    {% else %}
+                    <li class="list-group-item text-muted px-0 border-0">Complete quizzes to see mastery</li>
+                    {% endfor %}
+                </ul>
             </div>
         </div>
-        
-        <!-- Preferences -->
-        <div class="card mb-4">
-            <div class="card-header bg-white">
-                <h5 class="mb-0"><i class="bi bi-gear"></i> Preferences</h5>
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white border-0 pb-0">
+                <h6 class="mb-0"><i class="bi bi-exclamation-triangle text-warning"></i> Weak Concepts</h6>
             </div>
-            <div class="card-body">
-                <form id="preferencesForm">
-                    <div class="mb-3">
-                        <label class="form-label">Default Quiz Difficulty</label>
-                        <select class="form-select" name="default_difficulty">
-                            <option value="adaptive" {{ 'selected' if user.preferences.default_difficulty == 'adaptive' else '' }}>
-                                Adaptive (Recommended)
-                            </option>
-                            <option value="easy" {{ 'selected' if user.preferences.default_difficulty == 'easy' else '' }}>Easy</option>
-                            <option value="medium" {{ 'selected' if user.preferences.default_difficulty == 'medium' else '' }}>Medium</option>
-                            <option value="hard" {{ 'selected' if user.preferences.default_difficulty == 'hard' else '' }}>Hard</option>
-                        </select>
+            <div class="card-body pt-2">
+                {% if weak_concepts %}
+                {% for concept, score in weak_concepts %}
+                <div class="mb-2">
+                    <div class="d-flex justify-content-between">
+                        <small class="text-truncate" title="{{ concept }}">{{ concept }}</small>
+                        <small class="text-danger fw-bold">{{ "%.0f"|format(score * 100) }}%</small>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Preferred Question Types</label>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="question_types" value="mcq" id="prefMcq" checked>
-                            <label class="form-check-label" for="prefMcq">Multiple Choice</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="question_types" value="tf" id="prefTf" checked>
-                            <label class="form-check-label" for="prefTf">True/False</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="question_types" value="short" id="prefShort" checked>
-                            <label class="form-check-label" for="prefShort">Short Answer</label>
-                        </div>
+                    <div class="progress" style="height: 5px;">
+                        <div class="progress-bar bg-danger" style="width: {{ score * 100 }}%"></div>
                     </div>
-                    <div class="form-check mb-3">
-                        <input class="form-check-input" type="checkbox" id="emailNotifications" name="email_notifications" 
-                               {{ 'checked' if user.preferences.email_notifications else '' }}>
-                        <label class="form-check-label" for="emailNotifications">
-                            Receive email notifications
-                        </label>
-                    </div>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-check"></i> Save Preferences
-                    </button>
-                </form>
+                </div>
+                {% endfor %}
+                {% else %}
+                <p class="text-muted text-center mb-0 py-2"><i class="bi bi-check-circle text-success"></i> No weak areas!</p>
+                {% endif %}
             </div>
         </div>
-        
-        <!-- Danger Zone -->
-        <div class="card border-danger">
-            <div class="card-header bg-danger text-white">
-                <h5 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Danger Zone</h5>
+    </div>
+</div>
+
+<!-- ═══════ QUIZ HISTORY TABLE ═══════ -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white border-0 pb-0">
+                <h5 class="mb-0"><i class="bi bi-clock-history text-primary"></i> Recent Quiz History</h5>
             </div>
             <div class="card-body">
-                <p class="mb-3">These actions are irreversible. Please proceed with caution.</p>
-                <div class="d-flex gap-2">
-                    <button class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#clearDataModal">
-                        <i class="bi bi-trash"></i> Clear Quiz History
-                    </button>
-                    <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">
-                        <i class="bi bi-person-x"></i> Delete Account
-                    </button>
+                {% if quiz_history %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Quiz</th>
+                                <th class="text-center">Score</th>
+                                <th class="text-center">Marks</th>
+                                <th>Performance</th>
+                                <th class="text-center">Grade</th>
+                                <th class="text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for quiz in quiz_history[-10:]|reverse %}
+                            {% set score_val = quiz.get('score_percentage', quiz.get('score', 0)) or 0 %}
+                            <tr>
+                                <td>
+                                    <strong>{{ quiz.get('quiz_name', 'Quiz') }}</strong>
+                                    <br><small class="text-muted">{{ quiz.get('timestamp', '')[:10] }}</small>
+                                </td>
+                                <td class="text-center">
+                                    <strong class="{{ 'text-success' if score_val >= 80 else 'text-warning' if score_val >= 60 else 'text-danger' }}">
+                                        {{ "%.0f"|format(score_val) }}%
+                                    </strong>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-{{ 'success' if score_val >= 60 else 'danger' }}">
+                                        {{ quiz.get('marks_obtained', quiz.get('correct', 0))|int }}/{{ quiz.get('total_marks', quiz.get('total_questions', 0))|int }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="progress" style="height: 18px; min-width: 100px;">
+                                        <div class="progress-bar {{ 'bg-success' if score_val >= 80 else 'bg-warning' if score_val >= 60 else 'bg-danger' }}"
+                                             style="width: {{ score_val }}%">
+                                            <span class="px-1 small">{{ "%.0f"|format(score_val) }}%</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    {% if score_val >= 90 %}
+                                    <span class="badge bg-success">A+</span>
+                                    {% elif score_val >= 80 %}
+                                    <span class="badge bg-success">A</span>
+                                    {% elif score_val >= 70 %}
+                                    <span class="badge bg-info">B</span>
+                                    {% elif score_val >= 60 %}
+                                    <span class="badge bg-warning">C</span>
+                                    {% else %}
+                                    <span class="badge bg-danger">F</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    {% if quiz.get('attempt_id') and quiz.get('quiz_id') %}
+                                    <a href="{{ url_for('quiz.results', quiz_id=quiz['quiz_id'], attempt_id=quiz['attempt_id']) }}"
+                                       class="btn btn-sm btn-outline-primary" title="View Details">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4 text-muted">
+                    <i class="bi bi-clipboard-x" style="font-size: 3rem;"></i>
+                    <p class="mt-2 mb-1">No quizzes taken yet</p>
+                    <a href="{{ url_for('quiz.index') }}" class="btn btn-primary btn-sm mt-1">
+                        <i class="bi bi-play-fill"></i> Take a Quiz
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════ SETTINGS (Collapsible) ═══════ -->
+<div class="collapse mb-4" id="settingsSection">
+    <div class="row">
+        <div class="col-md-6">
+            <!-- Update Profile Form -->
+            <div class="card shadow-sm border-0 mb-3">
+                <div class="card-header bg-white border-0 pb-0">
+                    <h5 class="mb-0"><i class="bi bi-pencil"></i> Update Profile</h5>
+                </div>
+                <div class="card-body">
+                    <form id="updateProfileForm">
+                        <div class="mb-3">
+                            <label for="name" class="form-label">Full Name</label>
+                            <input type="text" class="form-control" id="name" name="name"
+                                   value="{{ user.name | default('') }}">
+                        </div>
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email Address</label>
+                            <input type="email" class="form-control" id="email" name="email"
+                                   value="{{ user.email }}" disabled>
+                            <small class="text-muted">Email cannot be changed</small>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check"></i> Save Changes
+                        </button>
+                    </form>
+                </div>
+            </div>
+            <!-- Change Password -->
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white border-0 pb-0">
+                    <h5 class="mb-0"><i class="bi bi-key"></i> Change Password</h5>
+                </div>
+                <div class="card-body">
+                    <form id="changePasswordForm">
+                        <div class="mb-3">
+                            <label for="currentPassword" class="form-label">Current Password</label>
+                            <input type="password" class="form-control" id="currentPassword" name="current_password">
+                        </div>
+                        <div class="mb-3">
+                            <label for="newPassword" class="form-label">New Password</label>
+                            <input type="password" class="form-control" id="newPassword" name="new_password">
+                        </div>
+                        <div class="mb-3">
+                            <label for="confirmPassword" class="form-label">Confirm New Password</label>
+                            <input type="password" class="form-control" id="confirmPassword" name="confirm_password">
+                        </div>
+                        <button type="submit" class="btn btn-warning">
+                            <i class="bi bi-key"></i> Change Password
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <!-- Preferences -->
+            <div class="card shadow-sm border-0 mb-3">
+                <div class="card-header bg-white border-0 pb-0">
+                    <h5 class="mb-0"><i class="bi bi-gear"></i> Preferences</h5>
+                </div>
+                <div class="card-body">
+                    <form id="preferencesForm">
+                        <div class="mb-3">
+                            <label class="form-label">Default Quiz Difficulty</label>
+                            <select class="form-select" name="default_difficulty">
+                                <option value="adaptive" {{ 'selected' if user.preferences.default_difficulty == 'adaptive' else '' }}>
+                                    Adaptive (Recommended)
+                                </option>
+                                <option value="easy" {{ 'selected' if user.preferences.default_difficulty == 'easy' else '' }}>Easy</option>
+                                <option value="medium" {{ 'selected' if user.preferences.default_difficulty == 'medium' else '' }}>Medium</option>
+                                <option value="hard" {{ 'selected' if user.preferences.default_difficulty == 'hard' else '' }}>Hard</option>
+                            </select>
+                        </div>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="emailNotifications" name="email_notifications"
+                                   {{ 'checked' if user.preferences.email_notifications else '' }}>
+                            <label class="form-check-label" for="emailNotifications">
+                                Receive email notifications
+                            </label>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check"></i> Save Preferences
+                        </button>
+                    </form>
+                </div>
+            </div>
+            <!-- Danger Zone -->
+            <div class="card border-danger shadow-sm">
+                <div class="card-header bg-danger text-white border-0">
+                    <h5 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Danger Zone</h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-3 small">These actions are irreversible.</p>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#clearDataModal">
+                            <i class="bi bi-trash"></i> Clear History
+                        </button>
+                        <button class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">
+                            <i class="bi bi-person-x"></i> Delete Account
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -223,12 +394,125 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-// Update Profile
+Chart.defaults.font.family = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
+
+// ======= PERFORMANCE OVER TIME CHART =======
+const performanceLabels = {{ performance_labels | tojson | default('[]') }};
+const performanceData = {{ performance_data | tojson | default('[]') }};
+
+if (performanceLabels.length > 0) {
+    const ctx = document.getElementById('performanceChart');
+    const gradient = ctx.getContext('2d').createLinearGradient(0, 0, 0, 350);
+    gradient.addColorStop(0, 'rgba(102, 126, 234, 0.5)');
+    gradient.addColorStop(1, 'rgba(118, 75, 162, 0.0)');
+
+    const avgScore = performanceData.reduce((a, b) => a + b, 0) / performanceData.length;
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: performanceLabels,
+            datasets: [
+                {
+                    label: 'Quiz Score (%)',
+                    data: performanceData,
+                    borderColor: '#667eea',
+                    backgroundColor: gradient,
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 6,
+                    pointHoverRadius: 10,
+                    pointBackgroundColor: performanceData.map(v =>
+                        v >= 80 ? '#10b981' : v >= 60 ? '#f59e0b' : '#ef4444'
+                    ),
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2
+                },
+                {
+                    label: 'Average (' + avgScore.toFixed(1) + '%)',
+                    data: performanceData.map(() => avgScore),
+                    borderColor: 'rgba(220, 53, 69, 0.4)',
+                    borderWidth: 2,
+                    borderDash: [8, 4],
+                    fill: false,
+                    pointRadius: 0
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            scales: {
+                y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } },
+                x: { ticks: { maxRotation: 45, font: { size: 10 } } }
+            },
+            plugins: {
+                legend: { display: true, position: 'top' }
+            }
+        }
+    });
+}
+
+// ======= CONCEPT MASTERY CHART =======
+const masteryLabels = {{ mastery_labels | tojson | default('[]') }};
+const masteryData = {{ mastery_data | tojson | default('[]') }};
+const masteryPredicted = {{ mastery_predicted | tojson | default('[]') }};
+
+if (masteryLabels.length > 0 && masteryData.length > 0) {
+    const mCtx = document.getElementById('masteryChart');
+    if (mCtx) {
+        new Chart(mCtx, {
+            type: 'bar',
+            data: {
+                labels: masteryLabels,
+                datasets: [
+                    {
+                        label: 'Current Mastery (%)',
+                        data: masteryData,
+                        backgroundColor: masteryData.map(v => {
+                            if (v >= 80) return 'rgba(25, 135, 84, 0.8)';
+                            if (v >= 70) return 'rgba(13, 202, 240, 0.8)';
+                            if (v >= 50) return 'rgba(255, 193, 7, 0.8)';
+                            return 'rgba(220, 53, 69, 0.8)';
+                        }),
+                        borderRadius: 6,
+                        maxBarThickness: 30
+                    },
+                    {
+                        label: 'Predicted (%)',
+                        data: masteryPredicted.length > 0 ? masteryPredicted : masteryData,
+                        backgroundColor: 'rgba(102, 126, 234, 0.3)',
+                        borderColor: '#667eea',
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        borderRadius: 6,
+                        maxBarThickness: 22
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                indexAxis: 'y',
+                scales: {
+                    x: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } },
+                    y: { ticks: { font: { size: 11 }, callback: function(value, index) {
+                        const label = this.getLabelForValue(value);
+                        return label.length > 25 ? label.substring(0, 22) + '...' : label;
+                    } } }
+                },
+                plugins: { legend: { display: true, position: 'top' } }
+            }
+        });
+    }
+}
+
+// ======= FORM HANDLERS =======
 document.getElementById('updateProfileForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     const formData = new FormData(this);
-    
     try {
         const response = await fetch('/api/profile', {
             method: 'PUT',
@@ -236,31 +520,18 @@ document.getElementById('updateProfileForm').addEventListener('submit', async fu
             body: JSON.stringify(Object.fromEntries(formData))
         });
         const data = await response.json();
-        
-        if (data.success) {
-            showToast('Profile updated successfully', 'success');
-        } else {
-            showToast(data.error || 'Failed to update profile', 'danger');
-        }
-    } catch (error) {
-        showToast('Error updating profile', 'danger');
-    }
+        if (data.success) { showToast('Profile updated successfully', 'success'); }
+        else { showToast(data.error || 'Failed to update profile', 'danger'); }
+    } catch (error) { showToast('Error updating profile', 'danger'); }
 });
 
-// Change Password
 document.getElementById('changePasswordForm').addEventListener('submit', async function(e) {
     e.preventDefault();
-    
-    const newPass = document.getElementById('newPassword').value;
-    const confirmPass = document.getElementById('confirmPassword').value;
-    
-    if (newPass !== confirmPass) {
+    if (document.getElementById('newPassword').value !== document.getElementById('confirmPassword').value) {
         showToast('Passwords do not match', 'danger');
         return;
     }
-    
     const formData = new FormData(this);
-    
     try {
         const response = await fetch('/api/change-password', {
             method: 'POST',
@@ -268,33 +539,18 @@ document.getElementById('changePasswordForm').addEventListener('submit', async f
             body: JSON.stringify(Object.fromEntries(formData))
         });
         const data = await response.json();
-        
-        if (data.success) {
-            showToast('Password changed successfully', 'success');
-            this.reset();
-        } else {
-            showToast(data.error || 'Failed to change password', 'danger');
-        }
-    } catch (error) {
-        showToast('Error changing password', 'danger');
-    }
+        if (data.success) { showToast('Password changed successfully', 'success'); this.reset(); }
+        else { showToast(data.error || 'Failed to change password', 'danger'); }
+    } catch (error) { showToast('Error changing password', 'danger'); }
 });
 
-// Save Preferences
 document.getElementById('preferencesForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     const formData = new FormData(this);
-    
-    // Handle checkboxes for question types
-    const questionTypes = formData.getAll('question_types');
-    formData.delete('question_types');
-    
     const preferences = {
         default_difficulty: formData.get('default_difficulty'),
-        question_types: questionTypes,
         email_notifications: formData.get('email_notifications') === 'on'
     };
-    
     try {
         const response = await fetch('/api/preferences', {
             method: 'PUT',
@@ -302,55 +558,34 @@ document.getElementById('preferencesForm').addEventListener('submit', async func
             body: JSON.stringify(preferences)
         });
         const data = await response.json();
-        
-        if (data.success) {
-            showToast('Preferences saved', 'success');
-        } else {
-            showToast(data.error || 'Failed to save preferences', 'danger');
-        }
-    } catch (error) {
-        showToast('Error saving preferences', 'danger');
-    }
+        if (data.success) { showToast('Preferences saved', 'success'); }
+        else { showToast(data.error || 'Failed to save preferences', 'danger'); }
+    } catch (error) { showToast('Error saving preferences', 'danger'); }
 });
 
-// Clear Quiz History
 async function clearQuizHistory() {
     try {
         const response = await fetch('/api/clear-history', { method: 'DELETE' });
         const data = await response.json();
-        
         if (data.success) {
             showToast('Quiz history cleared', 'success');
             bootstrap.Modal.getInstance(document.getElementById('clearDataModal')).hide();
-        } else {
-            showToast(data.error || 'Failed to clear history', 'danger');
-        }
-    } catch (error) {
-        showToast('Error clearing history', 'danger');
-    }
+            setTimeout(() => location.reload(), 1000);
+        } else { showToast(data.error || 'Failed to clear history', 'danger'); }
+    } catch (error) { showToast('Error clearing history', 'danger'); }
 }
 
-// Delete Account
 async function deleteAccount() {
-    const confirmation = document.getElementById('deleteConfirmation').value;
-    
-    if (confirmation !== 'DELETE') {
+    if (document.getElementById('deleteConfirmation').value !== 'DELETE') {
         showToast('Please type DELETE to confirm', 'warning');
         return;
     }
-    
     try {
         const response = await fetch('/api/account', { method: 'DELETE' });
         const data = await response.json();
-        
-        if (data.success) {
-            window.location.href = '/';
-        } else {
-            showToast(data.error || 'Failed to delete account', 'danger');
-        }
-    } catch (error) {
-        showToast('Error deleting account', 'danger');
-    }
+        if (data.success) { window.location.href = '/'; }
+        else { showToast(data.error || 'Failed to delete account', 'danger'); }
+    } catch (error) { showToast('Error deleting account', 'danger'); }
 }
 
 function showToast(message, type = 'info') {

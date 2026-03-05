@@ -6,20 +6,11 @@
 <style>
   .chart-container { position: relative; height: 300px; margin-bottom: 2rem; }
   .table td { vertical-align: middle; }
-  .table tbody tr:hover { background-color: #f8f9fa; cursor: pointer; transition: all 0.2s ease; }
-  .grade-badge { font-size: 0.9rem; font-weight: 600; padding: 0.4rem 0.8rem; }
-  .bg-orange { background-color: #fd7e14; }
-  .shadow-sm { box-shadow: 0 0.125rem 0.5rem rgba(0,0,0,0.075) !important; }
-  .card-header.bg-gradient { border: none; }
-  .progress { border-radius: 8px; overflow: hidden; }
-  .progress-bar { font-weight: 600; font-size: 0.85rem; transition: width 0.6s ease; }
-  .badge { font-weight: 600; }
-  .card { border: none; border-radius: 12px; overflow: hidden; }
-  .card-header { border-bottom: 1px solid rgba(0,0,0,0.05); }
-  .list-group-item { border-left: none; border-right: none; }
-  .list-group-item:first-child { border-top: none; }
-  .list-group-item:last-child { border-bottom: none; }
-  .stat-card { transition: transform 0.2s ease; }
+  .table tbody tr:hover { background-color: var(--gray-50, #f8fafc); cursor: pointer; transition: all 0.2s; }
+  .grade-badge { font-size: 0.9rem; font-weight: 600; padding: 0.4rem 0.8rem; border-radius: var(--radius-full, 999px); }
+  .bg-orange { background-color: #f97316; }
+  .progress-bar { font-weight: 600; font-size: 0.85rem; transition: width 0.6s cubic-bezier(0.16,1,0.3,1); }
+  .stat-card { transition: transform 0.2s cubic-bezier(0.16,1,0.3,1); }
   .stat-card:hover { transform: translateY(-3px); }
 </style>
 {% endblock %}
@@ -396,9 +387,9 @@
                                 }),
                                 borderColor: masteryData.map(v => {
                                     if (v >= 80) return '#198754';
-                                    if (v >= 70) return '#0dcaf0';
-                                    if (v >= 50) return '#ffc107';
-                                    return '#dc3545';
+                                    if (v >= 80) return '#10b981';
+                                    if (v >= 50) return '#f59e0b';
+                                    return '#ef4444';
                                 }),
                                 borderWidth: 2,
                                 borderRadius: 6,
@@ -565,7 +556,7 @@
                         pointRadius: 8,
                         pointHoverRadius: 12,
                         pointBackgroundColor: performanceData.map(v => 
-                            v >= 80 ? '#198754' : v >= 60 ? '#ffc107' : '#dc3545'
+                            v >= 80 ? '#10b981' : v >= 60 ? '#f59e0b' : '#ef4444'
                         ),
                         pointBorderColor: '#fff',
                         pointBorderWidth: 3,
@@ -669,7 +660,7 @@
                 labels: ['Excellent (80%+)', 'Good (60-79%)', 'Average (40-59%)', 'Poor (<40%)'],
                 datasets: [{
                     data: [excellent, good, average, poor],
-                    backgroundColor: ['#198754', '#ffc107', '#fd7e14', '#dc3545'],
+                    backgroundColor: ['#10b981', '#f59e0b', '#f97316', '#ef4444'],
                     borderWidth: 2,
                     borderColor: '#fff'
                 }]

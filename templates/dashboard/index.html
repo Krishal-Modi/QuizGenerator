@@ -3,63 +3,63 @@
 {% block title %}Dashboard - Adaptive Quiz Generator{% endblock %}
 
 {% block content %}
-<div class="row mb-4">
+<div class="row mb-4 align-items-center">
     <div class="col">
-        <h1><i class="bi bi-speedometer2"></i> Dashboard</h1>
-        <p class="text-muted">Welcome back, {{ user.name or session.get('name', 'Learner') }}!</p>
+        <h1 class="fw-bold"><i class="bi bi-speedometer2" style="color:var(--primary)"></i> Dashboard</h1>
+        <p class="text-muted mb-0">Welcome back, <strong>{{ user.name or session.get('name', 'Learner') }}</strong>!</p>
     </div>
 </div>
 
 <!-- Stats Cards -->
-<div class="row g-4 mb-5">
-    <div class="col-md-3">
-        <div class="card bg-primary text-white h-100">
+<div class="row g-3 mb-5">
+    <div class="col-6 col-lg-3">
+        <div class="card bg-primary text-white h-100 stats-card">
             <div class="card-body">
-                <div class="d-flex justify-content-between">
+                <div class="d-flex justify-content-between align-items-start">
                     <div>
-                        <h4 class="mb-0">{{ stats.total_quizzes }}</h4>
-                        <p class="mb-0">Quizzes Completed</p>
+                        <h4>{{ stats.total_quizzes }}</h4>
+                        <p class="mb-0 small">Quizzes Completed</p>
                     </div>
-                    <i class="bi bi-clipboard-check fs-1 opacity-50"></i>
+                    <i class="bi bi-clipboard-check fs-2 opacity-50"></i>
                 </div>
             </div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card bg-success text-white h-100">
+    <div class="col-6 col-lg-3">
+        <div class="card bg-success text-white h-100 stats-card">
             <div class="card-body">
-                <div class="d-flex justify-content-between">
+                <div class="d-flex justify-content-between align-items-start">
                     <div>
-                        <h4 class="mb-0">{{ "%.1f"|format(stats.average_score) }}%</h4>
-                        <p class="mb-0">Average Score</p>
+                        <h4>{{ "%.1f"|format(stats.average_score) }}%</h4>
+                        <p class="mb-0 small">Average Score</p>
                     </div>
-                    <i class="bi bi-graph-up fs-1 opacity-50"></i>
+                    <i class="bi bi-graph-up fs-2 opacity-50"></i>
                 </div>
             </div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card bg-info text-white h-100">
+    <div class="col-6 col-lg-3">
+        <div class="card bg-info text-white h-100 stats-card">
             <div class="card-body">
-                <div class="d-flex justify-content-between">
+                <div class="d-flex justify-content-between align-items-start">
                     <div>
-                        <h4 class="mb-0">{{ stats.concepts_mastered }}</h4>
-                        <p class="mb-0">Concepts Mastered</p>
+                        <h4>{{ stats.concepts_mastered }}</h4>
+                        <p class="mb-0 small">Concepts Mastered</p>
                     </div>
-                    <i class="bi bi-award fs-1 opacity-50"></i>
+                    <i class="bi bi-award fs-2 opacity-50"></i>
                 </div>
             </div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card bg-warning text-dark h-100">
+    <div class="col-6 col-lg-3">
+        <div class="card bg-warning text-dark h-100 stats-card">
             <div class="card-body">
-                <div class="d-flex justify-content-between">
+                <div class="d-flex justify-content-between align-items-start">
                     <div>
-                        <h4 class="mb-0">{{ stats.total_concepts }}</h4>
-                        <p class="mb-0">Total Concepts</p>
+                        <h4>{{ stats.total_concepts }}</h4>
+                        <p class="mb-0 small">Total Concepts</p>
                     </div>
-                    <i class="bi bi-lightbulb fs-1 opacity-50"></i>
+                    <i class="bi bi-lightbulb fs-2 opacity-50"></i>
                 </div>
             </div>
         </div>

@@ -4,9 +4,9 @@
 
 {% block extra_css %}
 <style>
-    .grade-badge { font-size: 0.85rem; font-weight: 600; padding: 0.35rem 0.7rem; }
-    .history-row:hover { background-color: #f8f9fa; transition: all 0.2s ease; }
-    .stat-card { transition: transform 0.2s ease; }
+    .grade-badge { font-size: 0.85rem; font-weight: 600; padding: 0.35rem 0.7rem; border-radius: var(--radius-full, 999px); }
+    .history-row:hover { background-color: var(--gray-50, #f8fafc); transition: all 0.2s; }
+    .stat-card { transition: transform 0.2s cubic-bezier(0.16,1,0.3,1); }
     .stat-card:hover { transform: translateY(-3px); }
 </style>
 {% endblock %}
@@ -237,13 +237,13 @@ if (historyData.length > 0) {
             datasets: [{
                 label: 'Score (%)',
                 data: scores,
-                borderColor: '#0d6efd',
+                borderColor: '#14b8a6',
                 backgroundColor: gradient,
                 fill: true,
                 tension: 0.3,
                 pointRadius: 6,
                 pointHoverRadius: 10,
-                pointBackgroundColor: scores.map(s => s >= 80 ? '#198754' : s >= 60 ? '#ffc107' : '#dc3545'),
+                pointBackgroundColor: scores.map(s => s >= 80 ? '#10b981' : s >= 60 ? '#f59e0b' : '#ef4444'),
                 pointBorderColor: '#fff',
                 pointBorderWidth: 2
             }]

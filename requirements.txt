@@ -25,6 +25,10 @@ transformers>=4.36.0
 torch>=2.1.0
 accelerate>=0.25.0
 
+# LLM APIs (optional – for ChatGPT/Gemini quality question generation)
+openai>=1.0.0
+google-generativeai>=0.3.0
+
 # Knowledge Graph
 networkx>=3.2.1
 pyvis>=0.3.2
