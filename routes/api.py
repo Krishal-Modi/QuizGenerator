@@ -37,7 +37,9 @@ def submit_answer():
     quiz_id = data.get('quiz_id')
     attempt_id = data.get('attempt_id')
     
-    # Evaluate answer
+    # Evaluate answer.
+    # Human note: short-answer grading can use semantic similarity (see
+    # `QuizService`), which Krish Thakkar helped tune for "same meaning" answers.
     result = quiz_service.evaluate_answer(quiz_id, question_id, answer)
     
     # Update bandit with reward signal

@@ -1,6 +1,11 @@
 """
 Quiz routes - Take quizzes, view results
 """
+
+# Contributor note: Krish Thakkar helped wire up key parts of the quiz flow
+# (start/take/submit/results), keeping the route logic readable while the heavy
+# lifting stays in services.
+
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
 from functools import wraps
 from services.firebase_service import FirebaseService
@@ -45,7 +50,9 @@ def start_quiz(quiz_id):
         flash('Quiz not found.', 'danger')
         return redirect(url_for('quiz.index'))
     
-    # Check if quiz is password protected
+    # Check if quiz is password protected.
+    # Human note: we keep the "gate" here so the user doesn't reach the quiz
+    # page unless they have access.
     if quiz.get('is_password_protected'):
         if request.method == 'POST':
             password = request.form.get('password')
@@ -83,7 +90,9 @@ def take_quiz(quiz_id):
     # Get questions for this quiz
     questions = firebase_service.get_quiz_questions(quiz_id)
     
-    # Use bandit algorithm to select questions adaptively
+    # Use bandit algorithm to select questions adaptively.
+    # Human note: this picks questions based on what the student seems to know,
+    # so the quiz stays challenging without being random.
     if quiz.get('is_adaptive', True):
         selected_questions = bandit_service.select_questions(
             questions=questions,
@@ -95,7 +104,9 @@ def take_quiz(quiz_id):
         # Static selection
         selected_questions = questions[:quiz.get('num_questions', 10)]
     
-    # Create quiz attempt
+    # Create quiz attempt.
+    # This attempt_id is the thread that ties together: shown questions,
+    # submitted answers, and the final results view.
     attempt_id = firebase_service.create_quiz_attempt(user_id, quiz_id, selected_questions)
     session[f'current_attempt_{quiz_id}'] = attempt_id
     
@@ -132,7 +143,9 @@ def submit_quiz(quiz_id):
         flash('Quiz session expired. Please start again.', 'warning')
         return redirect(url_for('quiz.start_quiz', quiz_id=quiz_id))
     
-    # Get submitted answers - collect ALL question IDs from form (including unanswered)
+    # Get submitted answers - collect ALL question IDs from the form.
+    # Human note: we keep a separate list of presented_question_ids so we can
+    # grade only what the student actually saw.
     answers = {}
     presented_question_ids = []
     for key, value in request.form.items():

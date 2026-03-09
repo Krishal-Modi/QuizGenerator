@@ -1,5 +1,10 @@
-"""
-Distractor Generator – produce plausible, conceptually-related wrong answers.
+"""Distractor Generator – produce plausible, conceptually-related wrong answers.
+
+Contributor note
+───────────────
+Krish Thakkar contributed to the embedding-based distractor selection and the
+semantic de-duplication pass that keeps options distinct (so learners see
+plausible *alternatives*, not near-duplicates).
 
 Design goals
 ────────────
@@ -18,7 +23,9 @@ import random
 import re
 from typing import Dict, List, Optional
 
-# Similarity ceiling – any candidate above this is considered a duplicate
+# Similarity ceiling – any candidate above this is treated as a near-duplicate.
+# We keep this fairly strict so the final options don't feel like the same
+# answer rephrased.
 _SIM_THRESHOLD = 0.82
 
 
@@ -57,11 +64,15 @@ class DistractorGenerator:
         candidates: List[str] = []
 
         # Strategy 1 – Knowledge-graph neighbours
+        # Human note: we start here because it tends to produce "on-topic" wrong
+        # answers cheaply, before we spend time on embeddings.
         candidates += self._from_knowledge_graph(
             concept, all_concepts, knowledge_graph, correct_answer
         )
 
         # Strategy 2 – Embedding-similar concepts
+        # Human note: embeddings help us find "close enough to be tempting"
+        # concepts without copying the correct answer.
         if len(candidates) < count * 2:
             candidates += self._from_embeddings(
                 concept, all_concepts, correct_answer
@@ -72,6 +83,8 @@ class DistractorGenerator:
             candidates += self._from_context(context, concept, correct_answer)
 
         # De-duplicate with semantic check
+        # This is the quality gate: avoid options that are too close to each
+        # other or to the correct answer (Krish's work focused here).
         unique = self._filter_unique(candidates, correct_answer, count)
 
         # Strategy 4 – Rule-based fallback for any remaining slots
@@ -271,7 +284,10 @@ class DistractorGenerator:
         correct_answer: str,
         count: int,
     ) -> List[str]:
-        """Keep only semantically distinct candidates."""
+        """Keep only semantically distinct candidates.
+
+        We want the learner to *think*, not to play "spot the duplicate".
+        """
         if not candidates:
             return []
 
@@ -302,7 +318,7 @@ class DistractorGenerator:
             for i, cand in enumerate(candidates):
                 cand_emb = embeddings[i + 1]
 
-                # Check vs correct answer
+                # Check vs correct answer (don't leak the right option)
                 sim_correct = float(
                     np.dot(correct_emb, cand_emb)
                     / (np.linalg.norm(correct_emb) * np.linalg.norm(cand_emb) + 1e-9)
@@ -310,7 +326,8 @@ class DistractorGenerator:
                 if sim_correct > _SIM_THRESHOLD:
                     continue
 
-                # Check vs already accepted
+                # Check vs already accepted (avoid two distractors that are the
+                # same idea phrased differently)
                 too_similar = False
                 for acc_emb in accepted_embs:
                     sim = float(

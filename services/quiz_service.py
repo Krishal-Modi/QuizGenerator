@@ -317,6 +317,9 @@ class QuizService:
             return True, string_sim
         
         # Method 4: Semantic similarity (if model available)
+        # Human note (Krish Thakkar): this is the "meaning" check.
+        # We only reach this step after exact/keyword/string matching fails,
+        # so we can give partial credit to paraphrases without over-accepting.
         self._load_sentence_model()
         
         if self._sentence_model:
@@ -328,6 +331,8 @@ class QuizService:
                     np.linalg.norm(embeddings[0]) * np.linalg.norm(embeddings[1])
                 )
                 
+                # Threshold tuned to be forgiving for paraphrases, but still
+                # reject answers that are merely "related".
                 if semantic_sim > 0.7:
                     return True, float(semantic_sim)
                 
