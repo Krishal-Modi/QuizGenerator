@@ -9,8 +9,9 @@ from services.mongodb_service import MongoDBService
 class ProgressService:
     """Service for tracking user progress and generating performance analytics"""
     
-    def __init__(self):
-        self.db_service = MongoDBService()
+    def __init__(self, db_service=None):
+        # Use injected db_service or create new one for backward compatibility
+        self.db_service = db_service or MongoDBService()
     
     def get_user_progress(self, user_id: str) -> Dict:
         """Get comprehensive user progress including stats and trends"""

@@ -5,16 +5,9 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from functools import wraps
 from werkzeug.utils import secure_filename
 import os
-from services.mongodb_service import MongoDBService
-from services.document_service import DocumentService
-from services.concept_service import ConceptService
-from services.question_generator import QuestionGenerator
+from config.extensions import db_service, document_service, concept_service, question_generator
 
 instructor_bp = Blueprint('instructor', __name__)
-db_service = MongoDBService()
-document_service = DocumentService()
-concept_service = ConceptService()
-question_generator = QuestionGenerator()
 
 
 def instructor_required(f):

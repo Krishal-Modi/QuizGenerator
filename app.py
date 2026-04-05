@@ -7,9 +7,17 @@ This application generates adaptive quizzes from lecture notes using:
 - Multiple question formats (MCQ, True/False, Short Answer)
 """
 
+# Suppress non-critical model loading warnings for cleaner logs
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # Suppress TensorFlow warnings
+
+import warnings
+warnings.filterwarnings('ignore', category=UserWarning)  # Suppress model loading warnings
+warnings.filterwarnings('ignore', message='.*tied weights.*')  # Suppress weight warnings
+warnings.filterwarnings('ignore', message='.*UNEXPECTED.*')  # Suppress embeddings warnings
+
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
 from functools import wraps
-import os
 from dotenv import load_dotenv
 
 # Load environment variables

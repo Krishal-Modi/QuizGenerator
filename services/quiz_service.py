@@ -11,7 +11,8 @@ class QuizService:
     Service for evaluating quiz answers and generating feedback.
     """
     
-    def __init__(self):
+    def __init__(self, db_service=None):
+        self.db_service = db_service  # Can be injected for shared connections
         self._sentence_model = None
     
     def _load_sentence_model(self):
@@ -40,8 +41,8 @@ class QuizService:
             Result dictionary with scores and details
         """
         try:
-            from services.mongodb_service import MongoDBService
-            db = MongoDBService()
+            # Use injected db_service if available, otherwise create new one
+            db = getattr(self, 'db_service', None) or MongoDBService()
             
             all_questions = db.get_quiz_questions(quiz_id)
         except Exception as e:

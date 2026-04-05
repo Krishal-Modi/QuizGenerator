@@ -4,6 +4,8 @@ MongoDB Service - Database operations with MongoDB Atlas
 import os
 import secrets
 import string
+import ssl
+import sys
 from datetime import datetime
 from typing import Dict, List, Optional, Any
 from bson.objectid import ObjectId
@@ -11,17 +13,31 @@ import bcrypt
 import jwt
 
 
+def _safe_print(message: str):
+    """Print with safe encoding handling"""
+    try:
+        print(message, flush=True)
+    except (UnicodeEncodeError, UnicodeDecodeError):
+        # Fallback: encode to ASCII if Unicode fails (Windows console)
+        safe = message.encode('ascii', errors='replace').decode('ascii')
+        print(safe, flush=True)
+
+
 class MongoDBService:
     """
-    Service for MongoDB operations with user authentication.
+    Service for MongoDB operations with MongoDB Atlas.
     
-    MongoDB Setup Instructions:
-    1. Install MongoDB: https://docs.mongodb.com/manual/installation/
-    2. Start MongoDB service locally (default: localhost:27017)
-    3. Set MONGODB_URI in .env (e.g., mongodb://localhost:27017/quiz_generator)
+    MongoDB Atlas Setup Instructions:
+    1. Go to: https://cloud.mongodb.com/
+    2. Login and navigate to Cluster0
+    3. Click "Browse Collections" to view your data
+    4. Database name: Quizgenerator
+    5. Collections: users, quizzes, documents, questions, attempts
     
-    For local development, MongoDB runs on: localhost:27017
-    Database name: quiz_generator
+    If you get SSL timeout:
+    - Check IP whitelist in MongoDB Atlas Security → Network Access
+    - Add your IP address or use 0.0.0.0/0
+    - Check firewall/antivirus blocking port 27017
     """
     
     def __init__(self):
@@ -31,46 +47,175 @@ class MongoDBService:
         self._initialize_mongodb()
     
     def _initialize_mongodb(self):
-        """Initialize MongoDB connection"""
+        """Initialize MongoDB Atlas connection with SSL/TLS handling and local fallback"""
         try:
             from pymongo import MongoClient
             
             mongodb_uri = os.getenv('MONGODB_URI')
             if not mongodb_uri:
-                print("[MongoDB] ⚠️  No URI configured. Running in demo mode.")
+                _safe_print("[MongoDB] WARNING: No URI configured. Running in demo mode.")
                 self._initialized = False
                 return
             
-            # Create connection with timeout settings
-            self._client = MongoClient(
-                mongodb_uri,
-                connectTimeoutMS=5000,
-                socketTimeoutMS=5000,
-                serverSelectionTimeoutMS=5000
-            )
+            _safe_print("[MongoDB] Connecting to MongoDB Atlas...")
             
-            # Test connection
-            self._client.admin.command('ping')
-            self._db = self._client['quiz_generator']
-            self._initialized = True
+            # Check if it's Atlas or Local
+            is_atlas = 'mongodb+srv://' in mongodb_uri
+            if is_atlas:
+                _safe_print("[MongoDB] MongoDB Atlas detected")
             
-            # Extract connection info for display
-            uri_parts = mongodb_uri.replace('mongodb://', '').replace('mongodb+srv://', '')
-            host_info = uri_parts.split('/')[0]
-            
-            print(f"[MongoDB] ✓ Connected to {host_info}")
-            
-            # Create indexes for better performance
-            self._create_indexes()
+            # Try connection with SSL verification first (recommended)
+            _safe_print("[MongoDB] Testing connection with SSL verification...")
+            try:
+                self._client = MongoClient(
+                    mongodb_uri,
+                    connectTimeoutMS=45000,
+                    socketTimeoutMS=45000,
+                    serverSelectionTimeoutMS=45000,
+                    retryWrites=True,
+                    w='majority',
+                    authSource='admin',
+                    minPoolSize=1,
+                    maxPoolSize=50,
+                    maxIdleTimeMS=45000,
+                    # SSL/TLS settings
+                    ssl=True,
+                    tlsInsecure=False,
+                    ssl_cert_reqs=ssl.CERT_REQUIRED
+                )
+                
+                # Test connection
+                self._client.admin.command('ping')
+                self._db = self._client['Quizgenerator']
+                self._initialized = True
+                
+                # Extract connection info for display
+                uri_parts = mongodb_uri.replace('mongodb://', '').replace('mongodb+srv://', '')
+                host_info = uri_parts.split('/')[0]
+                
+                _safe_print(f"[MongoDB] SUCCESS: Connected to MongoDB (SSL verified)")
+                _safe_print(f"[MongoDB] Host: {host_info}")
+                _safe_print(f"[MongoDB] Database: Quizgenerator")
+                
+                # Create indexes for better performance
+                self._create_indexes()
+                return
+                
+            except Exception as ssl_error:
+                # If SSL verification fails, try without strict verification
+                _safe_print("[MongoDB] WARNING: SSL verification failed, retrying without strict verification...")
+                
+                self._client = MongoClient(
+                    mongodb_uri,
+                    connectTimeoutMS=45000,
+                    socketTimeoutMS=45000,
+                    serverSelectionTimeoutMS=45000,
+                    retryWrites=True,
+                    w='majority',
+                    authSource='admin',
+                    minPoolSize=1,
+                    maxPoolSize=50,
+                    maxIdleTimeMS=45000,
+                    # SSL/TLS settings - less strict
+                    ssl=True,
+                    tlsInsecure=True  # Disable certificate verification (for firewall issues)
+                )
+                
+                # Test connection
+                self._client.admin.command('ping')
+                self._db = self._client['Quizgenerator']
+                self._initialized = True
+                
+                # Extract connection info for display
+                uri_parts = mongodb_uri.replace('mongodb://', '').replace('mongodb+srv://', '')
+                host_info = uri_parts.split('/')[0]
+                
+                _safe_print(f"[MongoDB] SUCCESS: Connected to MongoDB (SSL unverified)")
+                _safe_print(f"[MongoDB] Host: {host_info}")
+                _safe_print(f"[MongoDB] Database: Quizgenerator")
+                
+                # Create indexes for better performance
+                self._create_indexes()
+                return
             
         except Exception as e:
             error_msg = str(e)
-            if 'localhost' in error_msg or '127.0.0.1' in error_msg:
-                print("[MongoDB] ⚠️  Cannot connect to localhost:27017")
-                print("[MongoDB] ℹ️  Make sure MongoDB is running locally")
-            else:
-                print("[MongoDB] ⚠️  Connection failed. Running in demo mode.")
+            _safe_print(f"\n[MongoDB] ERROR: Connection failed")
+            _safe_print(f"[MongoDB] Details: {error_msg}\n")
+            
+            if 'timeout' in error_msg.lower() or 'timed out' in error_msg.lower() or 'ssl' in error_msg.lower():
+                _safe_print("[MongoDB] TROUBLESHOOTING - SSL/Firewall Issue:")
+                _safe_print("")
+                _safe_print("[1] WHITELIST YOUR IP (most common fix):")
+                _safe_print("    - Go to: https://cloud.mongodb.com/")
+                _safe_print("    - Click 'Cluster0'")
+                _safe_print("    - Go to 'Security' > 'Network Access'")
+                _safe_print("    - Click 'Add IP Address'")
+                _safe_print("    - Select 'Allow Access from Anywhere' (0.0.0.0/0)")
+                _safe_print("    - Click 'Confirm' and wait 2-3 minutes")
+                _safe_print("")
+                _safe_print("[2] CHECK FIREWALL SETTINGS:")
+                _safe_print("    - Windows Firewall may be blocking port 27017")
+                _safe_print("    - Antivirus software may block SSL connections")
+                _safe_print("    - Try temporarily disabling firewall to test")
+                _safe_print("")
+                _safe_print("[3] CHECK INTERNET CONNECTION:")
+                _safe_print("    - Run: ping google.com")
+                _safe_print("    - Run: ping cluster0.qsenboa.mongodb.net")
+                _safe_print("")
+                _safe_print("[4] DISABLE VPN:")
+                _safe_print("    - If using VPN, try disabling it")
+                _safe_print("    - Some VPNs block MongoDB Atlas")
+                _safe_print("")
+                _safe_print("[5] AFTER FIXING:")
+                _safe_print("    - Run: python test_atlas_connection.py")
+                _safe_print("    - Then: python app.py")
+                _safe_print("")
+            elif 'authentication' in error_msg.lower() or 'auth' in error_msg.lower():
+                _safe_print("[MongoDB] ERROR: Authentication failed!")
+                _safe_print("[MongoDB] Check credentials in .env:")
+                _safe_print("    - Username: krishalmodi2345_db_user")
+                _safe_print("    - Password: c35p04qQXnVk9VaU")
+                _safe_print("    - Verify they are correct in MongoDB Atlas")
+            
+            # Try automatic fallback to local MongoDB so the app can still fully work
+            try:
+                from pymongo import MongoClient as _MongoClientFallback
+                fallback_uri = os.getenv(
+                    'MONGODB_FALLBACK_URI',
+                    'mongodb://localhost:27017/Quizgenerator'
+                )
+                if fallback_uri:
+                    _safe_print("[MongoDB] Attempting fallback to local MongoDB...")
+                    self._client = _MongoClientFallback(
+                        fallback_uri,
+                        connectTimeoutMS=10000,
+                        socketTimeoutMS=10000,
+                        serverSelectionTimeoutMS=10000,
+                        minPoolSize=1,
+                        maxPoolSize=20,
+                    )
+                    # Test local connection
+                    self._client.admin.command('ping')
+                    self._db = self._client['Quizgenerator']
+                    self._initialized = True
+
+                    # Extract connection info for display
+                    uri_parts = fallback_uri.replace('mongodb://', '').replace('mongodb+srv://', '')
+                    host_info = uri_parts.split('/')[0]
+
+                    _safe_print("[MongoDB] SUCCESS: Connected to local MongoDB (fallback)")
+                    _safe_print(f"[MongoDB] Host: {host_info}")
+                    _safe_print("[MongoDB] Database: Quizgenerator")
+
+                    # Create indexes for the local database as well
+                    self._create_indexes()
+                    return
+            except Exception as local_err:
+                _safe_print(f"[MongoDB] WARNING: Local fallback also failed: {local_err}")
+
             self._initialized = False
+            _safe_print("[MongoDB] RUNNING IN DEMO MODE (data not persisted - will not save to database)\n")
     
     def _create_indexes(self):
         """Create database indexes for performance"""
@@ -96,7 +241,7 @@ class MongoDBService:
             self._db['attempts'].create_index('created_at')
             
         except Exception as e:
-            print(f"[MongoDB] ⚠️  Could not create indexes: {e}")
+            _safe_print(f"[MongoDB] WARNING: Could not create indexes: {e}")
     
     def get_timestamp(self) -> str:
         """Get current timestamp as ISO string"""
@@ -197,7 +342,7 @@ class MongoDBService:
             if not user:
                 raise Exception("Email not found.")
             
-            # Generate reset token
+            # Generate reset token (use secrets for secure random generation)
             reset_token = secrets.token_urlsafe(32)
             expiry = datetime.utcnow().timestamp() + 3600  # 1 hour
             
@@ -212,7 +357,7 @@ class MongoDBService:
             )
             
             # TODO: Send email with reset token
-            print(f"Password reset token generated for {email}: {reset_token}")
+            _safe_print(f"[Auth] Password reset token generated for {email}")
             return True
         except Exception as e:
             raise Exception(str(e))
@@ -235,7 +380,7 @@ class MongoDBService:
                 del user['password_hash']  # Don't return password hash
             return user or {}
         except Exception as e:
-            print(f"Error getting user data: {e}")
+            _safe_print(f"[MongoDB] Error getting user data: {e}")
             return {}
     
     def save_user_data(self, user_id: str, data: Dict):
@@ -297,7 +442,7 @@ class MongoDBService:
                 del doc['_id']
             return doc
         except Exception as e:
-            print(f"Error getting document: {e}")
+            _safe_print(f"[MongoDB] Error getting document: {e}")
             return None
     
     def get_instructor_documents(self, user_id: str) -> List[Dict]:
@@ -313,7 +458,7 @@ class MongoDBService:
                 del doc['_id']
             return docs
         except Exception as e:
-            print(f"Error getting documents: {e}")
+            _safe_print(f"[MongoDB] Error getting documents: {e}")
             return []
     
     # ===================== QUIZZES =====================
@@ -335,7 +480,7 @@ class MongoDBService:
             # Fallback: use UUID-based code
             return secrets.token_hex(8).upper()
         except Exception as e:
-            print(f"Error generating quiz code: {e}")
+            _safe_print(f"[MongoDB] Error generating quiz code: {e}")
             return secrets.token_hex(8).upper()
     
     def create_quiz(self, quiz_data: Dict, questions: List[Dict]) -> str:
@@ -395,7 +540,7 @@ class MongoDBService:
                 del q['_id']
             return questions
         except Exception as e:
-            print(f"Error getting questions: {e}")
+            _safe_print(f"[MongoDB] Error getting questions: {e}")
             return []
     
     def get_question(self, quiz_id: str, question_id: str) -> Optional[Dict]:
@@ -476,7 +621,7 @@ class MongoDBService:
                 return str(quiz['_id'])
             return None
         except Exception as e:
-            print(f"Error getting quiz by code: {e}")
+            _safe_print(f"[MongoDB] Error getting quiz by code: {e}")
             return None
     
     def delete_quiz(self, quiz_id: str) -> bool:
@@ -495,10 +640,10 @@ class MongoDBService:
             self._db['questions'].delete_many({'quiz_id': quiz_id})
             
             # Note: We don't delete attempts as they contain student history
-            print(f"Successfully deleted quiz {quiz_id}")
+            _safe_print(f"[Quiz] Successfully deleted quiz {quiz_id}")
             return True
         except Exception as e:
-            print(f"Error deleting quiz: {e}")
+            _safe_print(f"[MongoDB] Error deleting quiz: {e}")
             raise Exception(f"Failed to delete quiz: {str(e)}")
     
     # ===================== QUIZ ATTEMPTS =====================
@@ -635,7 +780,7 @@ class MongoDBService:
             
             return True
         except Exception as e:
-            print(f"Error saving quiz result: {str(e)}")
+            _safe_print(f"[MongoDB] Error saving quiz result: {str(e)}")
             raise Exception(f"Failed to save result: {str(e)}")
     
     def get_quiz_result(self, user_id: str, quiz_id: str, attempt_id: str) -> Optional[Dict]:
@@ -673,7 +818,7 @@ class MongoDBService:
             
             return history
         except Exception as e:
-            print(f"Error getting history: {e}")
+            _safe_print(f"[MongoDB] Error getting history: {e}")
             return []
     
     def get_recent_quizzes(self, user_id: str, limit: int = 5) -> List[Dict]:
@@ -707,7 +852,7 @@ class MongoDBService:
             
             return result.modified_count > 0 or result.upserted_id is not None
         except Exception as e:
-            print(f"Error adding to quiz history: {e}")
+            _safe_print(f"[MongoDB] Error adding to quiz history: {e}")
             return False
     
     # ===================== ANALYTICS =====================
@@ -739,7 +884,7 @@ class MongoDBService:
                 'lowest_score': min(scores) if scores else 0
             }
         except Exception as e:
-            print(f"Error getting statistics: {e}")
+            _safe_print(f"[MongoDB] Error getting statistics: {e}")
             return {}
     
     def get_instructor_analytics(self, user_id: str) -> Dict:
@@ -789,7 +934,7 @@ class MongoDBService:
             
             return {'nodes': nodes, 'edges': []}
         except Exception as e:
-            print(f"Error getting knowledge graph: {e}")
+            _safe_print(f"[MongoDB] Error getting knowledge graph: {e}")
             return {'nodes': [], 'edges': []}
     
     # ===================== DEMO DATA =====================

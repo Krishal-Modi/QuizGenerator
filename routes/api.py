@@ -3,16 +3,9 @@ API routes - AJAX endpoints for frontend
 """
 from flask import Blueprint, request, jsonify, session
 from functools import wraps
-from services.mongodb_service import MongoDBService
-from services.quiz_service import QuizService
-from services.bandit_service import BanditService
-from services.concept_service import ConceptService
+from config.extensions import db_service, quiz_service, bandit_service, concept_service
 
 api_bp = Blueprint('api', __name__)
-db_service = MongoDBService()
-quiz_service = QuizService()
-bandit_service = BanditService()
-concept_service = ConceptService()
 
 
 def api_login_required(f):

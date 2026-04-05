@@ -2,10 +2,9 @@
 Authentication routes - Login, Signup, Logout
 """
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
-from services.mongodb_service import MongoDBService
+from config.extensions import db_service
 
 auth_bp = Blueprint('auth', __name__)
-db_service = MongoDBService()
 
 
 @auth_bp.route('/login', methods=['GET', 'POST'])

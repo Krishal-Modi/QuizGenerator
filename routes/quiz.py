@@ -8,14 +8,9 @@ Quiz routes - Take quizzes, view results
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
 from functools import wraps
-from services.mongodb_service import MongoDBService
-from services.quiz_service import QuizService
-from services.bandit_service import BanditService
+from config.extensions import db_service, quiz_service, bandit_service
 
 quiz_bp = Blueprint('quiz', __name__)
-db_service = MongoDBService()
-quiz_service = QuizService()
-bandit_service = BanditService()
 
 
 def login_required(f):

@@ -3,12 +3,9 @@ Dashboard routes - User dashboard, progress tracking
 """
 from flask import Blueprint, render_template, session, redirect, url_for, flash, jsonify
 from functools import wraps
-from services.mongodb_service import MongoDBService
-from services.progress_service import ProgressService
+from config.extensions import db_service, progress_service
 
 dashboard_bp = Blueprint('dashboard', __name__)
-db_service = MongoDBService()
-progress_service = ProgressService()
 
 
 def login_required(f):
