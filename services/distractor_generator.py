@@ -50,44 +50,42 @@ class DistractorGenerator:
         count: int = 3,
     ) -> List[str]:
         """
-        Return exactly *count* unique distractors.
-
-        Strategies (layered – each fills remaining slots):
-        1. Knowledge-graph neighbour definitions
-        2. Embedding-nearest concept descriptions
-        3. Context-derived alternative phrases
-        4. Rule-based variations
+        Think of this as trying different idea buckets until we have enough good wrong answers:
+        Step 1: Look at the Knowledge Graph (things directly related to the concept). Let's see if any of its neighbors make good wrong answers.
+        Step 2: Look at Embeddings (things that mean something similar). If step 1 didn't give us enough, we find ideas that are mathematically close.
+        Step 3: Look at the Context (the text around the concept). If we're still short, grab plausible phrases from the text itself.
+        Step 4: Semantic Deduplication. Make sure none of the answers mean the exact same thing or are too similar to the correct answer.
+        Step 5: Rule-Based Fallback. If all else fails, use templates to fake a wrong answer (like swapping 'increases' with 'decreases').
         """
         if not correct_answer or not correct_answer.strip():
             return self._last_resort_distractors(concept, count)
 
         candidates: List[str] = []
 
-        # Strategy 1 – Knowledge-graph neighbours
-        # Human note: we start here because it tends to produce "on-topic" wrong
-        # answers cheaply, before we spend time on embeddings.
+        # Step 1: Knowledge Graph. Look at what concepts connect to our main concept.
+        # This is great because it gives us distractors from the *same topic family* without doing heavy maths.
         candidates += self._from_knowledge_graph(
             concept, all_concepts, knowledge_graph, correct_answer
         )
 
-        # Strategy 2 – Embedding-similar concepts
-        # Human note: embeddings help us find "close enough to be tempting"
-        # concepts without copying the correct answer.
+        # Step 2: Embeddings. If we don't have enough options, use AI to find mathematically similar concepts.
+        # This finds things that are close enough to be tricky, but mostly separate ideas.
         if len(candidates) < count * 2:
             candidates += self._from_embeddings(
                 concept, all_concepts, correct_answer
             )
 
-        # Strategy 3 – Context-derived phrases
+        # Step 3: Context phrases. Still not enough? Let's read the text around the concept itself
+        # and grab sentences that sound plausible but aren't the correct answer.
         if len(candidates) < count * 2:
             candidates += self._from_context(context, concept, correct_answer)
 
-        # De-duplicate with semantic check
-        # This is the quality gate: avoid options that are too close to each
-        # other or to the correct answer (Krish's work focused here).
+        # Step 4: Quality Gate. We have lots of messy candidates now.
+        # Let's filter out candidates that mean the same thing (e.g. "it gets bigger" and "it increases").
         unique = self._filter_unique(candidates, correct_answer, count)
 
-        # Strategy 4 – Rule-based fallback for any remaining slots
+        # Step 5: The Fallback. If we STILL don't have enough (maybe a tiny article?),
+        # let's just manipulate the correct answer to make up a fake wrong one.
         if len(unique) < count:
             fallbacks = self._rule_based_fallback(
                 correct_answer, concept, count - len(unique)
@@ -337,9 +335,10 @@ class DistractorGenerator:
         correct_answer: str,
         count: int,
     ) -> List[str]:
-        """Keep only semantically distinct candidates.
-
-        We want the learner to *think*, not to play "spot the duplicate".
+        """
+        Step 4 Details: Semantic Deduplication.
+        This picks ONLY unique, distinct options so the user doesn't get 
+        three answers that basically mean "It gets bigger."
         """
         if not candidates:
             return []
@@ -347,7 +346,7 @@ class DistractorGenerator:
         self._load_sentence_model()
 
         if self._sentence_model is None:
-            # Fall back to simple string dedup
+            # Fallback: Just make sure the words aren't identical.
             seen_lower: set = {correct_answer.lower()}
             unique: List[str] = []
             for c in candidates:
@@ -361,9 +360,10 @@ class DistractorGenerator:
         try:
             import numpy as np
 
+            # Step 4a: Let's turn all the possible answers into meaning vectors.
             all_texts = [correct_answer] + candidates
             embeddings = self._sentence_model.encode(all_texts)
-            correct_emb = embeddings[0]
+            correct_emb = embeddings[0] # Meaning of the correct answer
 
             accepted: List[str] = []
             accepted_embs = []
@@ -371,7 +371,8 @@ class DistractorGenerator:
             for i, cand in enumerate(candidates):
                 cand_emb = embeddings[i + 1]
 
-                # Check vs correct answer (don't leak the right option)
+                # Step 4b: Wait, is this basically the correct answer?
+                # Don't accidentally give them the correct answer disguised as a wrong one!
                 sim_correct = float(
                     np.dot(correct_emb, cand_emb)
                     / (np.linalg.norm(correct_emb) * np.linalg.norm(cand_emb) + 1e-9)
@@ -379,8 +380,8 @@ class DistractorGenerator:
                 if sim_correct > _SIM_THRESHOLD:
                     continue
 
-                # Check vs already accepted (avoid two distractors that are the
-                # same idea phrased differently)
+                # Step 4c: Wait, is this basically the SAME exact wrong answer we already used?
+                # We want 3 DIFFERENT wrong answers.
                 too_similar = False
                 for acc_emb in accepted_embs:
                     sim = float(
@@ -395,6 +396,7 @@ class DistractorGenerator:
                     accepted.append(cand)
                     accepted_embs.append(cand_emb)
 
+                # Step 4d: Do we have enough yet? Let's stop looking.
                 if len(accepted) >= count:
                     break
 

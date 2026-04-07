@@ -396,31 +396,35 @@ class QuizService:
         if string_sim > 0.8:
             return True, string_sim
         
-        # Method 4: Semantic similarity (if model available)
-        # Human note (Krish Thakkar): this is the "meaning" check.
-        # We only reach this step after exact/keyword/string matching fails,
-        # so we can give partial credit to paraphrases without over-accepting.
+        # Method 4: Semantic Similarity Grading
+        # This is where we understand what the student actually meant!
+        # Step 1: If exact words and string ratios fail, we read their answer.
+        # Step 2: Convert both the student's answer and the correct answer into vectors (lists of numbers).
+        # Step 3: Check how much of the "meaning" overlaps, giving credit to paraphrasing without giving away marks for unrelated guesses.
         self._load_sentence_model()
         
         if self._sentence_model:
             try:
                 import numpy as np
                 
+                # Turn sentences into mathematical meanings
                 embeddings = self._sentence_model.encode([user_clean, correct_clean])
                 
-                # Handle edge cases for embeddings
+                # Check how big these meaning vectors are (norm)
                 norm1 = np.linalg.norm(embeddings[0])
                 norm2 = np.linalg.norm(embeddings[1])
                 
                 if norm1 > 0 and norm2 > 0:
+                    # Compare the two vectors: dot product over normalized product.
+                    # This tells us how closely related the actual concepts are.
                     semantic_sim = float(np.dot(embeddings[0], embeddings[1]) / (norm1 * norm2))
                     
-                    # Handle NaN or Inf
+                    # Fix any weird maths resulting from empty strings
                     if not np.isfinite(semantic_sim):
                         semantic_sim = 0.0
                     
-                    # Threshold tuned to be forgiving for paraphrases, but still
-                    # reject answers that are merely "related".
+                    # Step 4: Grading. The threshold here is 0.7.
+                    # If it's mostly the same idea (e.g. "car" vs "automobile" semantics), reward the student!
                     if semantic_sim > 0.7:
                         return True, semantic_sim
                 
